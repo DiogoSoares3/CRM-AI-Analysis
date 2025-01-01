@@ -1,0 +1,16 @@
+dbt-postgres
+dbt-core
+python-dotenv
+fastapi
+uvicorn
+sqlalchemy>=2.0
+pydantic
+pydantic-settings
+psycopg2-binary
+streamlit
+fireducks
+numpy
+plotly
+lifetimes
+scikit-learn
+cloudpickle

@@ -1,0 +1,117 @@
+version: 2
+
+sources:
+  - name: CRM-db
+    schema: dev
+    tables:
+      - name: customers_rfm_features_source
+        description: "Source containing RFM features and related customer metrics"
+        columns:
+          - name: account
+            description: "Unique identifier for the customer"
+          - name: first_purchase
+            description: "Date of the customer's first purchase"
+          - name: last_purchase
+            description: "Date of the customer's most recent purchase"
+          - name: Recency
+            description: "Number of days since the last purchase"
+          - name: Frequency
+            description: "Total number of purchases made by the customer"
+          - name: Monetary
+            description: "Total monetary value of the customer's purchases"
+          - name: R_Score
+            description: "Customer's score for Recency"
+          - name: F_Score
+            description: "Customer's score for Frequency"
+          - name: M_Score
+            description: "Customer's score for Monetary"
+          - name: RFM_Score
+            description: "Combined score based on R, F, and M"
+          - name: RFM_Custom_Segment
+            description: "Custom segment for the customer based on RFM"
+          - name: Actual_CLTV
+            description: "Customer's actual lifetime value"
+          - name: RF_Ratio
+            description: "Ratio between Recency and Frequency"
+          - name: ATV
+            description: "Customer's average transaction value"
+          - name: engagement_score
+            description: "Customer's engagement score"
+
+      - name: general_enriched_dataset_source
+        description: "Source containing general and enriched data related to sales opportunities"
+        columns:
+          - name: opportunity_id
+            description: "Unique identifier for the sales opportunity"
+          - name: sales_agent
+            description: "Sales agent responsible for the opportunity"
+          - name: product
+            description: "Product associated with the opportunity"
+          - name: account
+            description: "Customer account linked to the opportunity"
+          - name: deal_stage
+            description: "Current stage of the deal"
+          - name: engage_date
+            description: "Date the opportunity engagement started"
+          - name: close_date
+            description: "Date the opportunity was closed"
+          - name: close_value
+            description: "Monetary value of the closed deal"
+          - name: sector
+            description: "Customer's sector"
+          - name: year_established
+            description: "Year the customer was established"
+          - name: revenue
+            description: "Customer's revenue"
+          - name: employees
+            description: "Number of employees at the customer's company"
+          - name: office_location
+            description: "Location of the customer's office"
+          - name: subsidiary_of
+            description: "Parent company, if applicable"
+          - name: series
+            description: "Series or category of the opportunity"
+          - name: sales_price
+            description: "Price of the product or service sold"
+          - name: manager
+            description: "Manager associated with the opportunity"
+          - name: regional_office
+            description: "Regional office handling the opportunity"
+          - name: sales_cycle_duration
+            description: "Duration of the sales cycle for the opportunity"
+          - name: agent_close_rate
+            description: "Close rate of the sales agent"
+          - name: opportunities_per_account
+            description: "Number of opportunities linked to the customer account"
+          - name: opportunities_per_sales_agent
+            description: "Number of opportunities handled by the sales agent"
+
+      - name: model_predictions_summary_source
+        description: "Source containing predictive metrics and CLTV analysis"
+        columns:
+          - name: account
+            description: "Unique identifier for the customer"
+          - name: T
+            description: "Duration since the customer's first transaction"
+          - name: prob_alive
+            description: "Probability that the customer is still active"
+          - name: expected_purchases_day
+            description: "Expected number of daily purchases"
+          - name: expected_purchases_week
+            description: "Expected number of weekly purchases"
+          - name: expected_purchases_monthly
+            description: "Expected number of monthly purchases"
+          - name: expected_purchases_bimonthly
+            description: "Expected number of purchases every two months"
+          - name: expected_purchases_trimester
+            description: "Expected number of purchases every three months"
+          - name: expected_purchases_half_year
+            description: "Expected number of purchases every six months"
+          - name: expected_purchases_year
+            description: "Expected number of yearly purchases"
+          - name: expected_average_profit
+            description: "Expected average profit per transaction"
+          - name: Predicted_Year_CLTV
+            description: "Predicted Customer Lifetime Value for the year"
+          - name: Predicted_CLTV_Segment
+            description: "Segment of the customer based on predicted CLTV"
