@@ -36,7 +36,7 @@ renamed_merged_data AS (
         g.engage_date AS business_engage_date,
         g.close_date AS business_close_date,
         g.close_value AS business_close_value,
-        g.sector AS costumer_sector,
+        g.sector AS customer_sector,
         g.year_established AS customer_partnership_year_established,
         g.revenue AS customer_revenue,
         g.employees AS customer_number_of_employees,
@@ -77,9 +77,9 @@ renamed_merged_data AS (
         m.expected_purchases_half_year AS customer_expected_purchases_half_year,
         m.expected_purchases_year AS customer_expected_purchases_year,
         m.expected_average_profit AS customer_expected_average_profit,
-        m."Predicted_Year_CLTV" AS customer_predicted_year_cltv,
-        m."Predicted_CLTV_Segment" AS customer_predicted_cltv_segment
-    FROM 
+        m."Predicted_Year_CLTV" AS predicted_year_customer_lifetime_value,
+        m."Predicted_CLTV_Segment" AS predicted_customer_lifetime_value_segment
+    FROM
         general_enriched_dataset g
 
     INNER JOIN customers_rfm_features c
