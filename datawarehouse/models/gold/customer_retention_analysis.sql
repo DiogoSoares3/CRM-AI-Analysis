@@ -16,3 +16,5 @@ SELECT
     *
 FROM 
     retention_data
+ORDER BY
+    customer_engagement_score

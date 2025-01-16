@@ -14,3 +14,7 @@ plotly
 lifetimes
 scikit-learn
 cloudpickle
+langchain_core
+langchain_openai
+langchain
+langchain-community

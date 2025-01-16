@@ -1,7 +1,7 @@
 {{ config(materialized='view') }}
 
 WITH customer_segmentation AS (
-    SELECT 
+    SELECT DISTINCT
         customer,
         customer_revenue,
         customer_office_location,

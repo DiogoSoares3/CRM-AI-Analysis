@@ -10,6 +10,8 @@ WITH agent_performance_data AS (
         {{ ref("stg-won_deal_stage") }}
     GROUP BY 
         sales_agent
+    ORDER BY
+        average_won_deal_effectiveness DESC
 )
 
 SELECT 

@@ -9,6 +9,8 @@ WITH sector_revenue_data AS (
         {{ ref("stg-won_deal_stage") }}
     GROUP BY 
         customer_sector
+    ORDER BY
+        total_revenue DESC
 )
 
 SELECT 

@@ -84,7 +84,15 @@ if st.button('Save'):
         st.json(deal_data.model_dump(mode="json"))
 
         # Just won endpoint for now:
-        api_request("http://localhost:8200/api/insert-won-stage-data/", json=deal_data.model_dump(mode="json"))
+        # api_request(
+        #     api_url="http://localhost:8200/api/insert-won-stage-data/",
+        #     json=deal_data.model_dump(mode="json")
+        # )
+        
+        api_request(
+            api_url="http://localhost:8200/api/text-to-sql/",
+            json=None
+        )
 
     except Exception as e:
         st.error(f"Error saving data: {e}")

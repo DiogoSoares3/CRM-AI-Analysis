@@ -28,7 +28,9 @@ customer_profitability_ranking AS (
         customer_profitability_data
 )
 
-SELECT 
+SELECT DISTINCT
     *
 FROM 
     customer_profitability_ranking
+ORDER BY
+    profitability_rank
