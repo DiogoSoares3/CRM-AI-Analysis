@@ -21,11 +21,11 @@ from models.sales_pipeline_model import SalesPipelineSourceModel
 
 load_dotenv()
 
-router = APIRouter()
+router = APIRouter(tags=['Database Operations'])
 
 
 @router.post('/run-dbt/', status_code=200, description='Run DBT models for data transformation and agregation')
-def run_dbt():
+def run_dbt() -> None:
     original_dir = os.getcwd()
     try:
         dbt_path = os.getenv("DBT_PATH")
@@ -54,6 +54,7 @@ def run_dbt():
         print(f"Unexpected error: {e}")
     finally:
         os.chdir(original_dir)
+        return Response(status_code=200)
 
 
 @router.post('/create-run-won-stage-data/', status_code=200, description='Insert data to Postgres database given a user input.')

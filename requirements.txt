@@ -18,3 +18,5 @@ langchain_core
 langchain_openai
 langchain
 langchain-community
+langgraph
+streamlit_js_eval
