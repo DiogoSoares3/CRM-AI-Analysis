@@ -20,3 +20,6 @@ langchain
 langchain-community
 langgraph
 streamlit_js_eval
+# mkdocs
+# mkdocs-material
+# mkdocstrings[python]

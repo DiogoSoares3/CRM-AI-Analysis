@@ -8,6 +8,7 @@ from lifetimes import BetaGeoFitter, GammaGammaFitter
 from lifetimes.utils import summary_data_from_transaction_data
 import numpy as np
 from sklearn.preprocessing import MinMaxScaler
+from sqlalchemy.orm import Session
 
 from models.accounts_model import AccountsSourceModel
 from models.products_model import ProductsSourceModel
@@ -17,7 +18,24 @@ from utils.export_models import export_beta_geo_fitter, export_gamma_gamma_fitte
 
 
 
-def full_dataset_preparation(session, deal_stage: str = 'Won', today_date: date = datetime(2018,1,1)):
+def full_dataset_preparation(
+    session: Session, deal_stage: str = 'Won', today_date: date = datetime(2018, 1, 1)
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    Prepares a consolidated dataset for analysis.
+
+    Args:
+        session (Session): Database session for loading data.
+        deal_stage (str): The deal stage to filter by. Default is 'Won'.
+        today_date (date): Reference date for temporal calculations. Default is 2018-01-01.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: 
+            - Summary data for merging.
+            - RFM data for merging.
+            - Consolidated dataset.
+    """
+
     accounts_df = load_accounts_data(session)
     products_df = load_products_data(session)
     sales_pipeline_df = load_sales_pipeline_data(session)
@@ -67,7 +85,22 @@ def full_dataset_preparation(session, deal_stage: str = 'Won', today_date: date 
     return summary_to_merge, rfm_to_merge, df
 
 
-def drop_duplicate_columns_for_merge(summary: pd.DataFrame, rfm: pd.DataFrame):    
+def drop_duplicate_columns_for_merge(
+    summary: pd.DataFrame, rfm: pd.DataFrame
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Removes duplicate columns from DataFrames before merging.
+
+    Args:
+        summary (pd.DataFrame): Summary DataFrame.
+        rfm (pd.DataFrame): RFM DataFrame.
+
+    Returns:
+        tuple[pd.DataFrame, pd.DataFrame]: 
+            - Summary DataFrame without duplicates.
+            - RFM DataFrame without duplicates.
+    """
+   
     summary = summary.drop(columns=['frequency', 'recency', 'monetary_value'])
     summary.reset_index(inplace=True)
 
@@ -76,7 +109,21 @@ def drop_duplicate_columns_for_merge(summary: pd.DataFrame, rfm: pd.DataFrame):
     return summary, rfm
 
 
-def make_cltv_predictions(summary: pd.DataFrame, bgf: BetaGeoFitter, ggf: GammaGammaFitter):
+def make_cltv_predictions(
+    summary: pd.DataFrame, bgf: BetaGeoFitter, ggf: GammaGammaFitter
+) -> pd.DataFrame:
+    """
+    Calculates and adds CLTV predictions to the DataFrame.
+
+    Args:
+        summary (pd.DataFrame): Summary DataFrame.
+        bgf (BetaGeoFitter): Beta-Geometric/NBD model.
+        ggf (GammaGammaFitter): Gamma-Gamma model.
+
+    Returns:
+        pd.DataFrame: DataFrame with added CLTV predictions.
+    """
+
     summary['Predicted_Year_CLTV'] = ggf.customer_lifetime_value(
         bgf,
         summary['frequency'],
@@ -93,7 +140,19 @@ def make_cltv_predictions(summary: pd.DataFrame, bgf: BetaGeoFitter, ggf: GammaG
     return summary
 
 
-def fit_predict_gamma_gamma_model(summary: pd.DataFrame):
+def fit_predict_gamma_gamma_model(summary: pd.DataFrame) -> tuple[pd.DataFrame, GammaGammaFitter]:
+    """
+    Fits and makes predictions using the Gamma-Gamma model.
+
+    Args:
+        summary (pd.DataFrame): Summary DataFrame.
+
+    Returns:
+        tuple[pd.DataFrame, GammaGammaFitter]: 
+            - Updated DataFrame with predictions.
+            - Fitted GammaGammaFitter instance.
+    """
+
     ggf = GammaGammaFitter(penalizer_coef=0.05)
     ggf.fit(summary['frequency'], summary['monetary_value'])
 
@@ -106,7 +165,22 @@ def fit_predict_gamma_gamma_model(summary: pd.DataFrame):
     return summary, ggf
     
 
-def fit_predict_bg_nbd_model(df, today_date: date = datetime(2018,1,1)):
+def fit_predict_bg_nbd_model(
+    df: pd.DataFrame, today_date: date = datetime(2018, 1, 1)
+) -> tuple[pd.DataFrame, BetaGeoFitter]:
+    """
+    Fits and makes predictions using the Beta-Geometric/NBD model.
+
+    Args:
+        df (pd.DataFrame): DataFrame with transaction data.
+        today_date (date): Reference date for calculations. Default is 2018-01-01.
+
+    Returns:
+        tuple[pd.DataFrame, BetaGeoFitter]: 
+            - DataFrame with predictions.
+            - Fitted BetaGeoFitter instance.
+    """
+
     summary = summary_data_from_transaction_data(
         df,
         customer_id_col='account',
@@ -155,7 +229,18 @@ def fit_predict_bg_nbd_model(df, today_date: date = datetime(2018,1,1)):
     return summary, bgf
 
 
-def make_rfm_enrichment(df, today_date: date):
+def make_rfm_enrichment(df: pd.DataFrame, today_date: date) -> pd.DataFrame:
+    """
+    Enriches the DataFrame with RFM metrics.
+
+    Args:
+        df (pd.DataFrame): Consolidated DataFrame.
+        today_date (date): Reference date for calculations.
+
+    Returns:
+        pd.DataFrame: DataFrame with added RFM metrics.
+    """
+
     rfm = df.groupby('account').agg({
         'close_date': ['min', 'max', lambda x: (today_date - x.max()).days],
         'account': 'count',
@@ -190,7 +275,17 @@ def make_rfm_enrichment(df, today_date: date):
     return rfm
 
 
-def expand_rfm_features(rfm: pd.DataFrame):
+def expand_rfm_features(rfm: pd.DataFrame) -> pd.DataFrame:
+    """
+    Expands RFM metrics with additional calculations and segmentation.
+
+    Args:
+        rfm (pd.DataFrame): RFM metrics DataFrame.
+
+    Returns:
+        pd.DataFrame: Updated DataFrame with new features and segmentation.
+    """
+
     custom_segment_map = {
         '111': 'Dormant',
         r'11[2-3]': 'Inactive Low Spenders',
@@ -232,12 +327,33 @@ def expand_rfm_features(rfm: pd.DataFrame):
     return rfm
 
 
-def make_filter_by_deal_stage(df: pd.DataFrame, deal_stage: str):
+def make_filter_by_deal_stage(df: pd.DataFrame, deal_stage: str) -> pd.DataFrame:
+    """
+    Filters the DataFrame by deal stage.
+
+    Args:
+        df (pd.DataFrame): Consolidated DataFrame.
+        deal_stage (str): Deal stage to filter by.
+
+    Returns:
+        pd.DataFrame: DataFrame filtered by deal stage.
+    """
+
     deal_stage_df = df[df['deal_stage'] == deal_stage]
     return deal_stage_df
 
 
-def make_preprocessing(df: pd.DataFrame):
+def make_preprocessing(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Performs preprocessing on the consolidated DataFrame.
+
+    Args:
+        df (pd.DataFrame): Consolidated DataFrame.
+
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame.
+    """
+    
     df['engage_date'] = pd.to_datetime(df['engage_date'])
     df['close_date'] = pd.to_datetime(df['close_date'])
     df['close_value'] = df['close_value'].astype(float)
@@ -248,7 +364,17 @@ def make_preprocessing(df: pd.DataFrame):
     return df
 
 
-def make_won_pre_feature_engineering(df: pd.DataFrame):
+def make_won_pre_feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Performs feature engineering for 'Won' deal stage data.
+
+    Args:
+        df (pd.DataFrame): Consolidated DataFrame.
+
+    Returns:
+        pd.DataFrame: DataFrame with additional features for 'Won' deal stage.
+    """
+
     won_lost_deal_stage_df = df[(df['deal_stage'] == 'Won') | (df['deal_stage'] == 'Lost')]
 
     total_opportunities = won_lost_deal_stage_df.groupby('sales_agent')['opportunity_id'].count()
@@ -264,7 +390,17 @@ def make_won_pre_feature_engineering(df: pd.DataFrame):
     return df
 
 
-def load_sales_pipeline_data(session):
+def load_sales_pipeline_data(session: Session) -> pd.DataFrame:
+    """
+    Loads sales pipeline data from the database.
+
+    Args:
+        session (Session): Database session.
+
+    Returns:
+        pd.DataFrame: DataFrame containing sales pipeline data.
+    """    
+
     query = select(SalesPipelineSourceModel)
     results = session.execute(query).all()
 
@@ -277,7 +413,17 @@ def load_sales_pipeline_data(session):
     return df
 
 
-def load_sales_teams_data(session):
+def load_sales_teams_data(session: Session) -> pd.DataFrame:
+    """
+    Loads sales teams data from the database.
+
+    Args:
+        session (Session): Database session.
+
+    Returns:
+        pd.DataFrame: DataFrame containing sales teams data.
+    """
+
     query = select(SalesTeamsSourceModel)
     results = session.execute(query).all()
 
@@ -290,7 +436,18 @@ def load_sales_teams_data(session):
     return df
 
 
-def load_products_data(session):
+
+def load_products_data(session: Session) -> pd.DataFrame:
+    """
+    Loads product data from the database.
+
+    Args:
+        session (Session): Database session.
+
+    Returns:
+        pd.DataFrame: DataFrame containing product data.
+    """
+
     query = select(ProductsSourceModel)
     results = session.execute(query).all()
 
@@ -303,7 +460,17 @@ def load_products_data(session):
     return df
 
 
-def load_accounts_data(session):
+def load_accounts_data(session: Session) -> pd.DataFrame:
+    """
+    Loads account data from the database.
+
+    Args:
+        session (Session): Database session.
+
+    Returns:
+        pd.DataFrame: DataFrame containing account data.
+    """
+
     query = select(AccountsSourceModel)
     results = session.execute(query).all()
 

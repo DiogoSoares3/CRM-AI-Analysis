@@ -63,6 +63,16 @@ services:
     depends_on:
       - postgres
 
+  mkdocs:
+    image: squidfunk/mkdocs-material
+    container_name: mkdocs
+    restart: always
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./:/docs
+    networks:
+      - dbt-network
 
 volumes:
   db-data:
