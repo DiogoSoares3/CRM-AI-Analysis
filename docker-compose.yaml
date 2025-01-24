@@ -64,7 +64,9 @@ services:
       - postgres
 
   mkdocs:
-    image: squidfunk/mkdocs-material
+    build:
+      context: ./
+      dockerfile: Dockerfile.mkdocs
     container_name: mkdocs
     restart: always
     ports:
@@ -73,6 +75,19 @@ services:
       - ./:/docs
     networks:
       - dbt-network
+  
+  terraform:
+    image: hashicorp/terraform
+    container_name: terraform
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - ~/.aws:/root/.aws
+    networks:
+      - dbt-network
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/sh
 
 volumes:
   db-data:
