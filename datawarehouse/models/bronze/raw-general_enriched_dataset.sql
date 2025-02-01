@@ -4,4 +4,4 @@
 SELECT 
     *
 FROM
-    {{ source('CRM-db', 'general_enriched_dataset_source')}}
+    {{ source('CRM', 'general_enriched_dataset_source')}}

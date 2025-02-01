@@ -1,8 +1,8 @@
 version: 2
 
 sources:
-  - name: CRM-db
-    schema: dev
+  - name: CRM
+    schema: prod
     tables:
       - name: customers_rfm_features_source
         description: "Source containing RFM features and related customer metrics"

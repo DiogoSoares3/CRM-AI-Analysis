@@ -76,12 +76,19 @@ def create_run_won_stage_data(db = Depends(get_session)):
                 except ProgrammingError as e:
                     print(f"Error trying to remove the table {table_name}: {e}")
 
-            df.to_sql(
+            result = df.to_sql(
                 table_name,
                 con=engine,
+                schema='prod',
                 index=False,
                 if_exists="replace"
             )
+            
+            if result:
+                print(result)
+                print('Tables added successfully')
+            else:
+                print("Didn't add tables")
 
         # Creating or updating the database views of medallion architecture
         run_dbt()
@@ -125,10 +132,10 @@ def insert_won_stage_data(data: UserInput, session = Depends(get_session)):
 @router.post('/insert-init-data/', status_code=200, description='Insert data to Postgres database given a source directory containing JSON or CSV files.')
 async def insert_init_data(session = Depends(get_session)):    
     with engine.connect() as conn:
-        create_schema_query = text(f"CREATE SCHEMA IF NOT EXISTS dev;")
+        create_schema_query = text(f"CREATE SCHEMA IF NOT EXISTS prod;") ### Alterar e deixar parametrizavel!
         conn.execute(create_schema_query)
         conn.commit()
-        print(f"Schema 'dev' create or retrieved.")
+        print(f"Schema 'prod' create or retrieved.")
 
         data_dir = os.path.join(settings.PROJECT_PATH, 'data')
         for file_name in os.listdir(data_dir):
@@ -142,14 +149,14 @@ async def insert_init_data(session = Depends(get_session)):
                 table_name = raw_table_name + '_source'
 
                 inspector = inspect(engine)
-                if not inspector.has_table(table_name, schema='dev'):
+                if not inspector.has_table(table_name, schema='prod'):
                     if raw_table_name == 'sales_pipeline':
                         id_column = 'opportunity_id'
                     else:
                         df['id'] = [str(uuid.uuid4()) for _ in range(len(df))]
                         id_column = 'id'
 
-                    metadata = MetaData(schema='dev')
+                    metadata = MetaData(schema='prod')
                     columns = [Column(id_column, String, primary_key=True)] + [
                         Column(col, String) for col in df.columns if col != id_column
                     ]

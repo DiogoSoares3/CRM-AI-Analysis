@@ -10,3 +10,16 @@ datawarehouse:
       dbname: "{{ env_var('POSTGRES_DB') }}"
       schema: "{{ env_var('DB_SCHEMA_DEV') }}"
       threads: "{{ env_var('DB_THREADS') | int }}"
+
+datawarehouse_prod:
+  target: prod # Default target config
+  outputs:
+    prod:
+      type: "{{ env_var('DB_TYPE') }}"
+      host: "{{ env_var('HOST_AWS') }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: "{{ env_var('POSTGRES_PORT') | int }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: "{{ env_var('DB_SCHEMA_PROD') }}"
+      threads: "{{ env_var('DB_THREADS') | int }}"
