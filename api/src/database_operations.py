@@ -24,11 +24,49 @@ load_dotenv()
 router = APIRouter(tags=['Database Operations'])
 
 
-@router.post('/run-dbt/', status_code=200, description='Run DBT models for data transformation and agregation')
-def run_dbt() -> None:
+@router.get('/serve-dbt-docs/', status_code=200, description='Generate and serve DBT docs')
+def docs_dbt() -> Response:
     original_dir = os.getcwd()
     try:
-        dbt_path = os.getenv("DBT_PATH")
+        dbt_path = settings.DBT_PATH
+        if not dbt_path:
+            raise ValueError("DBT_PATH environment variable is not set.")
+
+    except ValueError as e:
+        print(f"Configuration Error: {e}")
+
+    os.chdir(dbt_path)
+
+    try:
+        _ = subprocess.run(
+            ["dbt", "docs", "generate"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=True
+        )
+
+        _ = subprocess.run(
+            "dbt docs serve --host 0.0.0.0 --port 8080 > /dev/null 2>&1 &",
+            shell=True,
+            check=True
+        )
+
+    except subprocess.CalledProcessError as e:
+        print("Error occurred while running dbt:")
+        print(e.stderr)
+    except Exception as e:
+        print(f"Unexpected error occured generating or serving docs: {e}")
+    finally:
+        os.chdir(original_dir)
+        return Response(status_code=200)
+
+
+@router.post('/run-dbt/', status_code=200, description='Run DBT models for data transformation and agregation')
+def run_dbt() -> Response:
+    original_dir = os.getcwd()
+    try:
+        dbt_path = settings.DBT_PATH
         if not dbt_path:
             raise ValueError("DBT_PATH environment variable is not set.")
 
@@ -58,9 +96,9 @@ def run_dbt() -> None:
 
 
 @router.post('/create-run-won-stage-data/', status_code=200, description='Insert data to Postgres database given a user input.')
-def create_run_won_stage_data(db = Depends(get_session)):
+def create_run_won_stage_data(schema, session=Depends(get_session)) -> Response:
     try:
-        model_predictions_summary, customers_rfm_features, general_enriched_dataset = full_dataset_preparation(db)
+        model_predictions_summary, customers_rfm_features, general_enriched_dataset = full_dataset_preparation(session)
         all_dataframes = [model_predictions_summary, customers_rfm_features, general_enriched_dataset]
         dataframe_names = ['model_predictions_summary', 'customers_rfm_features', 'general_enriched_dataset'] 
 
@@ -79,7 +117,7 @@ def create_run_won_stage_data(db = Depends(get_session)):
             result = df.to_sql(
                 table_name,
                 con=engine,
-                schema='prod',
+                schema=schema,
                 index=False,
                 if_exists="replace"
             )
@@ -94,14 +132,14 @@ def create_run_won_stage_data(db = Depends(get_session)):
         run_dbt()
 
     except Exception as e:
-        db.rollback()
+        session.rollback()
         raise e
 
     return Response(status_code=200)
 
 
 @router.post('/insert-won-stage-data/', status_code=200, description='Insert data to Postgres database given a user input.', response_model=SalesPipelineSourceSchema)
-def insert_won_stage_data(data: UserInput, session = Depends(get_session)):
+def insert_won_stage_data(data: UserInput, session = Depends(get_session)) -> SalesPipelineSourceSchema:
     if data.unknow_customer:
         raise NotImplementedError('Unknown Customers are not yet implemented')
 
@@ -120,7 +158,10 @@ def insert_won_stage_data(data: UserInput, session = Depends(get_session)):
         session.add(new_oportunity)
         session.commit()
 
-        create_run_won_stage_data(session)
+        create_run_won_stage_data(
+            schema=settings.DB_SCHEMA,
+            session=session
+        )
 
     except Exception as e:
         session.rollback()
@@ -130,12 +171,13 @@ def insert_won_stage_data(data: UserInput, session = Depends(get_session)):
 
 
 @router.post('/insert-init-data/', status_code=200, description='Insert data to Postgres database given a source directory containing JSON or CSV files.')
-async def insert_init_data(session = Depends(get_session)):    
+async def insert_init_data(session = Depends(get_session)) -> Response:
     with engine.connect() as conn:
-        create_schema_query = text(f"CREATE SCHEMA IF NOT EXISTS prod;") ### Alterar e deixar parametrizavel!
+        schema = settings.DB_SCHEMA
+        create_schema_query = text(f"CREATE SCHEMA IF NOT EXISTS {schema};")
         conn.execute(create_schema_query)
         conn.commit()
-        print(f"Schema 'prod' create or retrieved.")
+        print(f"Schema {schema} create or retrieved.")
 
         data_dir = os.path.join(settings.PROJECT_PATH, 'data')
         for file_name in os.listdir(data_dir):
@@ -149,14 +191,14 @@ async def insert_init_data(session = Depends(get_session)):
                 table_name = raw_table_name + '_source'
 
                 inspector = inspect(engine)
-                if not inspector.has_table(table_name, schema='prod'):
+                if not inspector.has_table(table_name, schema=schema):
                     if raw_table_name == 'sales_pipeline':
                         id_column = 'opportunity_id'
                     else:
                         df['id'] = [str(uuid.uuid4()) for _ in range(len(df))]
                         id_column = 'id'
 
-                    metadata = MetaData(schema='prod')
+                    metadata = MetaData(schema=schema)
                     columns = [Column(id_column, String, primary_key=True)] + [
                         Column(col, String) for col in df.columns if col != id_column
                     ]
@@ -175,6 +217,9 @@ async def insert_init_data(session = Depends(get_session)):
                         raise e
         
         # Just to create the processed data when the API starts up
-        create_run_won_stage_data(session)
+        create_run_won_stage_data(
+            schema=schema,
+            session=session
+        )
 
     return Response(status_code=200)

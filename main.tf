@@ -1,11 +1,15 @@
 terraform {
-    ### Assumes s3 bucket and dynamo DB table already set up
+    #############################################################
+    ## AFTER RUNNING TERRAFORM APPLY (WITH LOCAL BACKEND)
+    ## YOU WILL UNCOMMENT THIS CODE THEN RERUN TERRAFORM INIT
+    ## TO SWITCH FROM LOCAL BACKEND TO REMOTE AWS BACKEND
+    #############################################################
     # backend "s3" {
-    #     bucket         = "ai-crm-tf-state"
-    #     key            = "terraform.tfstate" # Where within the bucket it will store that state
-    #     region         = "us-east-1"
-    #     dynamodb_table = "terraform-state-locking"
-    #     encrypt        = true
+    #   bucket         = "crm-analysis-tf-state"
+    #   key            = "terraform.tfstate"
+    #   region         = "us-east-1"
+    #   dynamodb_table = "terraform-state-locking"
+    #   encrypt        = true
     # }
     required_providers {
       aws = {
@@ -20,16 +24,44 @@ provider "aws" {
   region = "us-east-1"
 }
 
-### Uncomment the section below if its your first time running the infrastructure
+resource "aws_s3_bucket" "terraform_state" {
+  bucket        = "crm-analysis-tf-state"
+  force_destroy = true
+}
+
+resource "aws_s3_bucket_versioning" "terraform_bucket_versioning" {
+  bucket = aws_s3_bucket.terraform_state.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state_crypto_conf" {
+  bucket        = aws_s3_bucket.terraform_state.bucket 
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_dynamodb_table" "terraform_locks" {
+  name         = "terraform-state-locking"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "LockID"
+  attribute {
+    name = "LockID"
+    type = "S"
+  }
+}
+
 resource "aws_secretsmanager_secret_version" "app_secrets_version" {
   secret_id     = data.aws_secretsmanager_secret.app_secrets.id
   secret_string = jsonencode({
     POSTGRES_USER            = var.POSTGRES_USER
     POSTGRES_PASSWORD        = var.POSTGRES_PASSWORD
     POSTGRES_DB              = var.POSTGRES_DB
-    PGADMIN_DEFAULT_EMAIL    = var.PGADMIN_DEFAULT_EMAIL
-    PGADMIN_DEFAULT_PASSWORD = var.PGADMIN_DEFAULT_PASSWORD
-    DB_URL                   = var.DB_URL
+    DB_URL_PROD              = var.DB_URL_PROD
     PROJECT_PATH             = var.PROJECT_PATH
     OPENAI_API_KEY           = var.OPENAI_API_KEY
     HOST_AWS                 = var.HOST_AWS
@@ -46,7 +78,7 @@ data "aws_secretsmanager_secret_version" "app_secrets_version" {
 }
 
 locals {
-  secrets = jsondecode(data.aws_secretsmanager_secret_version.app_secrets_version.secret_string)
+  secrets = jsondecode(aws_secretsmanager_secret_version.app_secrets_version.secret_string)
 }
 
 output "secrets" {
@@ -90,30 +122,6 @@ resource "aws_security_group" "instances" {
   }
 }
 
-
-
-# Content-Type: multipart/mixed; boundary="//"
-# MIME-Version: 1.0
-# --//
-# Content-Type: text/cloud-config; charset="us-ascii"
-# MIME-Version: 1.0
-# Content-Transfer-Encoding: 7bit
-# Content-Disposition: attachment; filename="cloud-config.txt"
-# #cloud-config
-# cloud_final_modules:
-# - [scripts-user, always]
-# --//
-# Content-Type: text/x-shellscript; charset="us-ascii"
-# MIME-Version: 1.0
-# Content-Transfer-Encoding: 7bit
-# Content-Disposition: attachment; filename="userdata.txt"
-# #!/bin/bash
-# sudo ufw disable
-# sudo iptables -L
-# sudo iptables -F
-
-
-
 resource "aws_instance" "app_server" {
   ami           = "ami-011899242bb902164"
   instance_type = "t2.micro"
@@ -145,7 +153,8 @@ resource "aws_instance" "app_server" {
     POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
     POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
     POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
-    DB_URL_PROD=${local.secrets["DB_URL"]}
+    DB_URL_PROD=${local.secrets["DB_URL_PROD"]}
+    DB_SCHEMA_PROD=${local.secrets["DB_URL_PROD"]}
     PROJECT_PATH=${local.secrets["PROJECT_PATH"]}
     OPENAI_API_KEY=${local.secrets["OPENAI_API_KEY"]}
     EOT
@@ -156,7 +165,7 @@ resource "aws_instance" "app_server" {
     POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
     POSTGRES_PORT=5432
     DB_TYPE="postgres"
-    DB_SCHEMA_PROD="prod"
+    DB_SCHEMA_PROD=${local.secrets["DB_URL_PROD"]}
     DB_THREADS=16
     HOST_AWS=${local.secrets["HOST_AWS"]}
     EOT
@@ -206,66 +215,6 @@ resource "aws_instance" "app_server" {
     Name = "AppServer"
   }
 }
-
-
-
-
-
-
-# resource "aws_instance" "instance_test" {
-#   ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
-#   instance_type = "t2.micro"
-#   security_groups = [aws_security_group.instances.name]
-#   user_data = <<-EOF
-#     #!/bin/bash
-#     sudo apt-get update -y
-#     sudo apt-get install -y nginx python3
-
-#     # Cria diretórios e arquivos para os três serviços
-    # mkdir -p /home/ubuntu/service1 /home/ubuntu/service2 /home/ubuntu/service3
-    # echo "Hello from Service 1" > /home/ubuntu/service1/index.html
-    # echo "Hello from Service 2" > /home/ubuntu/service2/index.html
-    # echo "Hello from Service 3" > /home/ubuntu/service3/index.html
-
-    # # Inicia os servidores python em background
-    # sudo nohup python3 -m http.server 8000 --directory /home/ubuntu/service1 > /dev/null 2>&1 &
-    # sudo nohup python3 -m http.server 8100 --directory /home/ubuntu/service2 > /dev/null 2>&1 &
-    # sudo nohup python3 -m http.server 8200 --directory /home/ubuntu/service3 > /dev/null 2>&1 &
-
-#     sudo tee /etc/nginx/sites-available/default << 'NGINX_CONF'
-#     server {
-#       listen 80 default_server;
-#       listen [::]:80 default_server;
-
-#       # Roteamento para Service1: remove o prefixo /service1 e encaminha para 127.0.0.1:8000
-#       location /service1/ {
-#         proxy_pass http://127.0.0.1:8000/;
-#         proxy_set_header Host $host;
-#         proxy_set_header X-Real-IP $remote_addr;
-#       }
-#       # Roteamento para Service2
-#       location /service2/ {
-#         proxy_pass http://127.0.0.1:8100/;
-#         proxy_set_header Host $host;
-#         proxy_set_header X-Real-IP $remote_addr;
-#       }
-#       # Roteamento para Service3
-#       location /service3/ {
-#         proxy_pass http://127.0.0.1:8200/;
-#         proxy_set_header Host $host;
-#         proxy_set_header X-Real-IP $remote_addr;
-#       }
-#       # Retorna 404 para demais caminhos
-#       location / {
-#         return 404 "Not Found";
-#       }
-#     }
-#     NGINX_CONF
-
-#     sudo systemctl restart nginx
-#   EOF
-# }
-
 
 ### If all the ports are consecutive (for example, 8000-8210),
 ### we can release the range in one go:
@@ -334,27 +283,27 @@ resource "aws_lb" "load_balancer" {
   security_groups    = [aws_security_group.alb.id]
 }
 
-resource "aws_db_instance" "free_postgres" {
-  identifier             = "freetier-postgres"
-  instance_class         = "db.t3.micro" # Única classe gratuita elegível
+resource "aws_db_instance" "postgres_db" {
+  identifier             = "postgres-db"
+  instance_class         = "db.t3.micro"
   engine                 = "postgres"
   engine_version         = "16"
-  allocated_storage      = 20            # Máximo permitido no Free Tier (GB)
+  allocated_storage      = 20
   storage_type           = "gp2"
   name                   = local.secrets["POSTGRES_DB"]
   username               = local.secrets["POSTGRES_USER"]
   password               = local.secrets["POSTGRES_PASSWORD"]
-  parameter_group_name   = aws_db_parameter_group.free_postgres.name
+  parameter_group_name   = aws_db_parameter_group.postgres_db.name
   skip_final_snapshot    = true
   publicly_accessible    = true
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-  db_subnet_group_name   = aws_db_subnet_group.free_tier.name
+  db_subnet_group_name   = aws_db_subnet_group.postgres_db.name
   deletion_protection    = false
-  backup_retention_period = 0 # Desativa backups para economia (não recomendado para produção)
+  backup_retention_period = 0
 }
 
-resource "aws_db_parameter_group" "free_postgres" {
-  name   = "free-postgres-params"
+resource "aws_db_parameter_group" "postgres_db" {
+  name   = "postgres-db-params"
   family = "postgres16"
 
   parameter {
@@ -377,7 +326,7 @@ resource "aws_security_group" "rds_sg" {
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Ajuste para seu IP em produção!
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -396,7 +345,7 @@ data "aws_subnets" "default" {
 }
 
 # Subnet Group
-resource "aws_db_subnet_group" "free_tier" {
-  name       = "free-tier-subnet-group"
+resource "aws_db_subnet_group" "postgres_db" {
+  name       = "postgres-db-subnet-group"
   subnet_ids = data.aws_subnets.default.ids
 }

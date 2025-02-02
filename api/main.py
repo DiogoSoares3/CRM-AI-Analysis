@@ -20,7 +20,12 @@ async def lifespan(app: FastAPI):
     pass
 
 
-app = FastAPI(title='CRM Analysis API')
+app = FastAPI(
+    title='CRM Analysis API',
+    docs_url="/docs",
+    redoc_url=None,  
+    openapi_url="/docs/openapi.json"
+)
 
 prefix = '/api'
 app.include_router(database_router, prefix=prefix)

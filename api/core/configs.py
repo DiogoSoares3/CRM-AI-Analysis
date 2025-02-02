@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     load_dotenv()
     DB_URL: ClassVar = os.getenv("DB_URL")
     PROJECT_PATH: ClassVar = os.getenv("PROJECT_PATH")
+    DB_SCHEMA: ClassVar = os.getenv("DB_SCHEMA")
+    DBT_PATH: ClassVar = os.getenv("DBT_PATH")
 
     class Config:
         case_sensitive = True
