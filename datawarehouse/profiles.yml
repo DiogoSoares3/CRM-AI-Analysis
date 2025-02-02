@@ -1,5 +1,5 @@
-datawarehouse:
-  target: dev # Default target config
+datawarehouse_dev:
+  target: dev
   outputs:
     dev:
       type: "{{ env_var('DB_TYPE') }}"
@@ -12,7 +12,7 @@ datawarehouse:
       threads: "{{ env_var('DB_THREADS') | int }}"
 
 datawarehouse_prod:
-  target: prod # Default target config
+  target: prod
   outputs:
     prod:
       type: "{{ env_var('DB_TYPE') }}"

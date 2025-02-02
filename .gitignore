@@ -188,7 +188,6 @@ pyrightconfig.json
 
 # Terraform configs
 .terraform/
-.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars

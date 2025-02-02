@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: CRM
-    schema: prod
+    schema: "{{ env_var('DB_SCHEMA') }}"
     tables:
       - name: customers_rfm_features_source
         description: "Source containing RFM features and related customer metrics"

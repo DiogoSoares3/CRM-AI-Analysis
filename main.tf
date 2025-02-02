@@ -32,6 +32,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets_version" {
     DB_URL                   = var.DB_URL
     PROJECT_PATH             = var.PROJECT_PATH
     OPENAI_API_KEY           = var.OPENAI_API_KEY
+    HOST_AWS                 = var.HOST_AWS
     force_update             = timestamp()
   })
 }
@@ -89,33 +90,38 @@ resource "aws_security_group" "instances" {
   }
 }
 
+
+
+# Content-Type: multipart/mixed; boundary="//"
+# MIME-Version: 1.0
+# --//
+# Content-Type: text/cloud-config; charset="us-ascii"
+# MIME-Version: 1.0
+# Content-Transfer-Encoding: 7bit
+# Content-Disposition: attachment; filename="cloud-config.txt"
+# #cloud-config
+# cloud_final_modules:
+# - [scripts-user, always]
+# --//
+# Content-Type: text/x-shellscript; charset="us-ascii"
+# MIME-Version: 1.0
+# Content-Transfer-Encoding: 7bit
+# Content-Disposition: attachment; filename="userdata.txt"
+# #!/bin/bash
+# sudo ufw disable
+# sudo iptables -L
+# sudo iptables -F
+
+
+
 resource "aws_instance" "app_server" {
   ami           = "ami-011899242bb902164"
   instance_type = "t2.micro"
-  vpc_security_group_ids = [aws_security_group.instances.id]
-  subnet_id = aws_subnet.subnet_1.id
+  vpc_security_group_ids = [aws_security_group.instances.name]
   associate_public_ip_address = true
 
   user_data = <<-EOF
-    Content-Type: multipart/mixed; boundary="//"
-    MIME-Version: 1.0
-    --//
-    Content-Type: text/cloud-config; charset="us-ascii"
-    MIME-Version: 1.0
-    Content-Transfer-Encoding: 7bit
-    Content-Disposition: attachment; filename="cloud-config.txt"
-    #cloud-config
-    cloud_final_modules:
-    - [scripts-user, always]
-    --//
-    Content-Type: text/x-shellscript; charset="us-ascii"
-    MIME-Version: 1.0
-    Content-Transfer-Encoding: 7bit
-    Content-Disposition: attachment; filename="userdata.txt"
     #!/bin/bash
-    sudo ufw disable
-    sudo iptables -L
-    sudo iptables -F
     sudo apt-get update && sudo apt-get upgrade -y
     sudo apt-get install ca-certificates curl -y
     sudo install -m 0755 -d /etc/apt/keyrings
@@ -135,28 +141,25 @@ resource "aws_instance" "app_server" {
     git clone https://github.com/DiogoSoares3/CRM-AI-Analysis.git /home/ubuntu/app
     cd /home/ubuntu/app
 
-    # cat <<EOT >> /home/ubuntu/app/.env
-    # POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
-    # POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
-    # POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
-    # PGADMIN_DEFAULT_EMAIL=${local.secrets["PGADMIN_DEFAULT_EMAIL"]}
-    # PGADMIN_DEFAULT_PASSWORD=${local.secrets["PGADMIN_DEFAULT_PASSWORD"]}
-    # DB_URL=${local.secrets["DB_URL"]}
-    # PROJECT_PATH=${local.secrets["PROJECT_PATH"]}
-    # DB_LOCAL_URL=${local.secrets["DB_LOCAL_URL"]}
-    # OPENAI_API_KEY=${local.secrets["OPENAI_API_KEY"]}
-    # EOT
+    cat <<EOT >> /home/ubuntu/app/.env
+    POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
+    POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
+    POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
+    DB_URL_PROD=${local.secrets["DB_URL"]}
+    PROJECT_PATH=${local.secrets["PROJECT_PATH"]}
+    OPENAI_API_KEY=${local.secrets["OPENAI_API_KEY"]}
+    EOT
 
-    # cat <<EOT >> /home/ubuntu/app/datawarehouse/.env
-    # POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
-    # POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
-    # POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
-    # POSTGRES_PORT="5432"
-    # DB_TYPE="postgres"
-    # DB_SCHEMA_DEV="dev"
-    # DB_SCHEMA_PROD="prod"
-    # DB_THREADS=16
-    # EOT
+    cat <<EOT >> /home/ubuntu/app/datawarehouse/.env
+    POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
+    POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
+    POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
+    POSTGRES_PORT=5432
+    DB_TYPE="postgres"
+    DB_SCHEMA_PROD="prod"
+    DB_THREADS=16
+    HOST_AWS=${local.secrets["HOST_AWS"]}
+    EOT
 
     sudo apt-get install -y nginx python3
 
@@ -166,22 +169,22 @@ resource "aws_instance" "app_server" {
         listen [::]:80 default_server;
         server_name _;
 
-        location /service1/ {
+        location /docs/ {
             proxy_pass http://127.0.0.1:8000/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }
-        # location /service2/ {
-        #     proxy_pass http://127.0.0.1:8080/;
-        #     proxy_set_header Host $host;
-        #     proxy_set_header X-Real-IP $remote_addr;
-        # }
-        # location /service3/ {
-        #     proxy_pass http://127.0.0.1:8200/;
-        #     proxy_set_header Host $host;
-        #     proxy_set_header X-Real-IP $remote_addr;
-        # }
-        location /service2/ {
+        location /dbt_docs/ {
+            proxy_pass http://127.0.0.1:8080/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        location /api_docs/ {
+            proxy_pass http://127.0.0.1:8200/docs;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        location /app/ {
             proxy_pass http://127.0.0.1:8210/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
@@ -196,13 +199,18 @@ resource "aws_instance" "app_server" {
 
     sudo systemctl restart nginx
 
-    sudo docker compose -f docker-compose.test.yaml up -d
+    sudo docker compose -f docker-compose.prod.yaml up -d
   EOF
 
   tags = {
     Name = "AppServer"
   }
 }
+
+
+
+
+
 
 # resource "aws_instance" "instance_test" {
 #   ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
@@ -326,69 +334,69 @@ resource "aws_lb" "load_balancer" {
   security_groups    = [aws_security_group.alb.id]
 }
 
-# resource "aws_db_instance" "free_postgres" {
-#   identifier             = "freetier-postgres"
-#   instance_class         = "db.t3.micro" # Única classe gratuita elegível
-#   engine                 = "postgres"
-#   engine_version         = "16"
-#   allocated_storage      = 20            # Máximo permitido no Free Tier (GB)
-#   storage_type           = "gp2"
-#   name                   = local.secrets["POSTGRES_DB"]
-#   username               = local.secrets["POSTGRES_USER"]
-#   password               = local.secrets["POSTGRES_PASSWORD"]
-#   parameter_group_name   = aws_db_parameter_group.free_postgres.name
-#   skip_final_snapshot    = true
-#   publicly_accessible    = true
-#   vpc_security_group_ids = [aws_security_group.rds_sg.id]
-#   db_subnet_group_name   = aws_db_subnet_group.free_tier.name
-#   deletion_protection    = false
-#   backup_retention_period = 0 # Desativa backups para economia (não recomendado para produção)
-# }
+resource "aws_db_instance" "free_postgres" {
+  identifier             = "freetier-postgres"
+  instance_class         = "db.t3.micro" # Única classe gratuita elegível
+  engine                 = "postgres"
+  engine_version         = "16"
+  allocated_storage      = 20            # Máximo permitido no Free Tier (GB)
+  storage_type           = "gp2"
+  name                   = local.secrets["POSTGRES_DB"]
+  username               = local.secrets["POSTGRES_USER"]
+  password               = local.secrets["POSTGRES_PASSWORD"]
+  parameter_group_name   = aws_db_parameter_group.free_postgres.name
+  skip_final_snapshot    = true
+  publicly_accessible    = true
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  db_subnet_group_name   = aws_db_subnet_group.free_tier.name
+  deletion_protection    = false
+  backup_retention_period = 0 # Desativa backups para economia (não recomendado para produção)
+}
 
-# resource "aws_db_parameter_group" "free_postgres" {
-#   name   = "free-postgres-params"
-#   family = "postgres16"
+resource "aws_db_parameter_group" "free_postgres" {
+  name   = "free-postgres-params"
+  family = "postgres16"
 
-#   parameter {
-#     name  = "timezone"
-#     value = "UTC"
-#   }
+  parameter {
+    name  = "timezone"
+    value = "UTC"
+  }
 
-#   parameter {
-#     name  = "log_statement"
-#     value = "none"
-#   }
-# }
+  parameter {
+    name  = "log_statement"
+    value = "none"
+  }
+}
 
-# # Security Group para o RDS
-# resource "aws_security_group" "rds_sg" {
-#   name        = "rds-security-group"
-#   description = "Permite trafego PostgreSQL"
+# Security Group para o RDS
+resource "aws_security_group" "rds_sg" {
+  name        = "rds-security-group"
+  description = "Permite trafego PostgreSQL"
 
-#   ingress {
-#     from_port   = 5432
-#     to_port     = 5432
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"] # Ajuste para seu IP em produção!
-#   }
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Ajuste para seu IP em produção!
+  }
 
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-# }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
-# data "aws_subnets" "default" {
-#   filter {
-#     name   = "vpc-id"
-#     values = [data.aws_vpc.default_vpc.id]
-#   }
-# }
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default_vpc.id]
+  }
+}
 
-# # Subnet Group
-# resource "aws_db_subnet_group" "free_tier" {
-#   name       = "free-tier-subnet-group"
-#   subnet_ids = data.aws_subnets.default.ids
-# }
+# Subnet Group
+resource "aws_db_subnet_group" "free_tier" {
+  name       = "free-tier-subnet-group"
+  subnet_ids = data.aws_subnets.default.ids
+}

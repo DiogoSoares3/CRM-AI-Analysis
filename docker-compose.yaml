@@ -27,6 +27,8 @@ services:
       - ./datawarehouse/.env
     environment:
       DB_URL: ${DB_URL_DEV}
+      DB_SCHEMA: ${DB_SCHEMA_DEV}
+      PROFILE: datawarehouse_dev
       DBT_PROFILES_DIR: /PROJECT/datawarehouse
       DBT_PROJECT_DIR: /PROJECT/datawarehouse
       PYTHONPATH: ${PROJECT_PATH}/api:${PROJECT_PATH}/datawarehouse:${PROJECT_PATH}/shared:${PROJECT_PATH}/app:${PROJECT_PATH}
