@@ -53,152 +53,156 @@ output "secrets" {
   sensitive = true
 }
 
-# data "aws_vpc" "default_vpc" {
-#   default = true
-# }
+data "aws_vpc" "default_vpc" {
+  default = true
+}
 
-# data "aws_subnet_ids" "default_subnet" {
-#   vpc_id = data.aws_vpc.default_vpc.id
-# }
+data "aws_subnet_ids" "default_subnet" {
+  vpc_id = data.aws_vpc.default_vpc.id
+}
 
-# resource "aws_security_group" "instances" {
-#   name = "instance-security-group"
-#   description = "Security group for EC2 instances"
-#   vpc_id      = data.aws_vpc.default_vpc.id
+resource "aws_security_group" "instances" {
+  name = "instance-security-group"
+  description = "Security group for EC2 instances"
+  vpc_id      = data.aws_vpc.default_vpc.id
 
-#   # Permite tráfego HTTP e SSH
-#   ingress {
-#     from_port   = 80
-#     to_port     = 80
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
+  # Permite tráfego HTTP e SSH
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-#   ingress {
-#     from_port   = 22
-#     to_port     = 22
-#     protocol    = "tcp"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 
-#   egress {
-#     from_port   = 0
-#     to_port     = 0
-#     protocol    = "-1"
-#     cidr_blocks = ["0.0.0.0/0"]
-#   }
-# }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
 
-# resource "aws_instance" "app_server" {
-#   ami           = "ami-011899242bb902164"
-#   instance_type = "t2.micro"
-#   vpc_security_group_ids = [aws_security_group.instances.id]
-#   subnet_id = aws_subnet.subnet_1.id
-#   associate_public_ip_address = true
+resource "aws_instance" "app_server" {
+  ami           = "ami-011899242bb902164"
+  instance_type = "t2.micro"
+  vpc_security_group_ids = [aws_security_group.instances.id]
+  subnet_id = aws_subnet.subnet_1.id
+  associate_public_ip_address = true
 
-#   user_data = <<-EOF
-#     Content-Type: multipart/mixed; boundary="//"
-#     MIME-Version: 1.0
-#     --//
-#     Content-Type: text/cloud-config; charset="us-ascii"
-#     MIME-Version: 1.0
-#     Content-Transfer-Encoding: 7bit
-#     Content-Disposition: attachment; filename="cloud-config.txt"
-#     #cloud-config
-#     cloud_final_modules:
-#     - [scripts-user, always]
-#     --//
-#     Content-Type: text/x-shellscript; charset="us-ascii"
-#     MIME-Version: 1.0
-#     Content-Transfer-Encoding: 7bit
-#     Content-Disposition: attachment; filename="userdata.txt"
-#     #!/bin/bash
-#     sudo ufw disable
-#     sudo iptables -L
-#     sudo iptables -F
-#     sudo apt-get update && sudo apt-get upgrade -y
-#     sudo apt-get install ca-certificates curl -y
-#     sudo install -m 0755 -d /etc/apt/keyrings
-#     curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-#     sudo chmod a+r /etc/apt/keyrings/docker.asc
+  user_data = <<-EOF
+    Content-Type: multipart/mixed; boundary="//"
+    MIME-Version: 1.0
+    --//
+    Content-Type: text/cloud-config; charset="us-ascii"
+    MIME-Version: 1.0
+    Content-Transfer-Encoding: 7bit
+    Content-Disposition: attachment; filename="cloud-config.txt"
+    #cloud-config
+    cloud_final_modules:
+    - [scripts-user, always]
+    --//
+    Content-Type: text/x-shellscript; charset="us-ascii"
+    MIME-Version: 1.0
+    Content-Transfer-Encoding: 7bit
+    Content-Disposition: attachment; filename="userdata.txt"
+    #!/bin/bash
+    sudo ufw disable
+    sudo iptables -L
+    sudo iptables -F
+    sudo apt-get update && sudo apt-get upgrade -y
+    sudo apt-get install ca-certificates curl -y
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+    sudo chmod a+r /etc/apt/keyrings/docker.asc
 
-#     # Add the repository to Apt sources:
-#     echo \
-#         "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
-#         $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-#         sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-#     sudo apt-get update -y
-#     sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
-#     sudo systemctl start docker
-#     sudo systemctl enable docker
+    # Add the repository to Apt sources:
+    echo \
+        "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+        $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+        sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    sudo apt-get update -y
+    sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
+    sudo systemctl start docker
+    sudo systemctl enable docker
 
-#     git clone https://github.com/DiogoSoares3/CRM-AI-Analysis.git /home/ubuntu/app
-#     cd /home/ubuntu/app
+    git clone https://github.com/DiogoSoares3/CRM-AI-Analysis.git /home/ubuntu/app
+    cd /home/ubuntu/app
 
-#     cat <<EOT >> /home/ubuntu/app/.env
-#     POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
-#     POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
-#     POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
-#     PGADMIN_DEFAULT_EMAIL=${local.secrets["PGADMIN_DEFAULT_EMAIL"]}
-#     PGADMIN_DEFAULT_PASSWORD=${local.secrets["PGADMIN_DEFAULT_PASSWORD"]}
-#     DB_URL=${local.secrets["DB_URL"]}
-#     PROJECT_PATH=${local.secrets["PROJECT_PATH"]}
-#     DB_LOCAL_URL=${local.secrets["DB_LOCAL_URL"]}
-#     OPENAI_API_KEY=${local.secrets["OPENAI_API_KEY"]}
-#     EOT
+    # cat <<EOT >> /home/ubuntu/app/.env
+    # POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
+    # POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
+    # POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
+    # PGADMIN_DEFAULT_EMAIL=${local.secrets["PGADMIN_DEFAULT_EMAIL"]}
+    # PGADMIN_DEFAULT_PASSWORD=${local.secrets["PGADMIN_DEFAULT_PASSWORD"]}
+    # DB_URL=${local.secrets["DB_URL"]}
+    # PROJECT_PATH=${local.secrets["PROJECT_PATH"]}
+    # DB_LOCAL_URL=${local.secrets["DB_LOCAL_URL"]}
+    # OPENAI_API_KEY=${local.secrets["OPENAI_API_KEY"]}
+    # EOT
 
-#     cat <<EOT >> /home/ubuntu/app/datawarehouse/.env
-#     POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
-#     POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
-#     POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
-#     POSTGRES_PORT="5432"
-#     DB_TYPE="postgres"
-#     DB_SCHEMA_DEV="dev"
-#     DB_SCHEMA_PROD="prod"
-#     DB_THREADS=16
-#     EOT
+    # cat <<EOT >> /home/ubuntu/app/datawarehouse/.env
+    # POSTGRES_USER=${local.secrets["POSTGRES_USER"]}
+    # POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
+    # POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
+    # POSTGRES_PORT="5432"
+    # DB_TYPE="postgres"
+    # DB_SCHEMA_DEV="dev"
+    # DB_SCHEMA_PROD="prod"
+    # DB_THREADS=16
+    # EOT
 
-#     sudo apt-get install -y nginx python3
+    sudo apt-get install -y nginx python3
 
-    # sudo tee /etc/nginx/sites-available/default << 'NGINX_CONF'
-    # server {
-    #     listen 80 default_server;
-    #     listen [::]:80 default_server;
+    sudo tee /etc/nginx/sites-available/default << 'NGINX_CONF'
+    server {
+        listen 80 default_server;
+        listen [::]:80 default_server;
+        server_name _;
 
-    #     # Roteamento para Service1: remove o prefixo /service1 e encaminha para 127.0.0.1:8000
-    #     location /service1/ {
-    #         proxy_pass http://127.0.0.1:8000/;
-    #         proxy_set_header Host $host;
-    #         proxy_set_header X-Real-IP $remote_addr;
-    #     }
-    #     # Roteamento para Service2
-    #     location /service2/ {
-    #         proxy_pass http://127.0.0.1:8100/;
-    #         proxy_set_header Host $host;
-    #         proxy_set_header X-Real-IP $remote_addr;
-    #     }
-    #     # Roteamento para Service3
-    #     location /service3/ {
-    #         proxy_pass http://127.0.0.1:8200/;
-    #         proxy_set_header Host $host;
-    #         proxy_set_header X-Real-IP $remote_addr;
-    #     }
-    #     # Retorna 404 para demais caminhos
-    #     location / {
-    #         return 404 "Not Found";
-    #     }
-    # }
-    # NGINX_CONF
+        location /service1/ {
+            proxy_pass http://127.0.0.1:8000/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        # location /service2/ {
+        #     proxy_pass http://127.0.0.1:8080/;
+        #     proxy_set_header Host $host;
+        #     proxy_set_header X-Real-IP $remote_addr;
+        # }
+        # location /service3/ {
+        #     proxy_pass http://127.0.0.1:8200/;
+        #     proxy_set_header Host $host;
+        #     proxy_set_header X-Real-IP $remote_addr;
+        # }
+        location /service2/ {
+            proxy_pass http://127.0.0.1:8210/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+        }
+        location / {
+               # First attempt to serve request as file, then
+               # as directory, then fall back to displaying a 40>
+            try_files $uri $uri/ =404;
+       }
+    }
+    NGINX_CONF
 
-#     sudo systemctl restart nginx
+    sudo systemctl restart nginx
 
-#     sudo docker compose -f docker-compose.prod.yaml up -d
-#   EOF
+    sudo docker compose -f docker-compose.test.yaml up -d
+  EOF
 
-#   tags = {
-#     Name = "AppServer"
-#   }
-# }
+  tags = {
+    Name = "AppServer"
+  }
+}
 
 # resource "aws_instance" "instance_test" {
 #   ami           = "ami-011899242bb902164" # Ubuntu 20.04 LTS // us-east-1
@@ -210,15 +214,15 @@ output "secrets" {
 #     sudo apt-get install -y nginx python3
 
 #     # Cria diretórios e arquivos para os três serviços
-#     mkdir -p /home/ubuntu/service1 /home/ubuntu/service2 /home/ubuntu/service3
-#     echo "Hello from Service 1" > /home/ubuntu/service1/index.html
-#     echo "Hello from Service 2" > /home/ubuntu/service2/index.html
-#     echo "Hello from Service 3" > /home/ubuntu/service3/index.html
+    # mkdir -p /home/ubuntu/service1 /home/ubuntu/service2 /home/ubuntu/service3
+    # echo "Hello from Service 1" > /home/ubuntu/service1/index.html
+    # echo "Hello from Service 2" > /home/ubuntu/service2/index.html
+    # echo "Hello from Service 3" > /home/ubuntu/service3/index.html
 
-#     # Inicia os servidores python em background
-#     sudo nohup python3 -m http.server 8000 --directory /home/ubuntu/service1 > /dev/null 2>&1 &
-#     sudo nohup python3 -m http.server 8100 --directory /home/ubuntu/service2 > /dev/null 2>&1 &
-#     sudo nohup python3 -m http.server 8200 --directory /home/ubuntu/service3 > /dev/null 2>&1 &
+    # # Inicia os servidores python em background
+    # sudo nohup python3 -m http.server 8000 --directory /home/ubuntu/service1 > /dev/null 2>&1 &
+    # sudo nohup python3 -m http.server 8100 --directory /home/ubuntu/service2 > /dev/null 2>&1 &
+    # sudo nohup python3 -m http.server 8200 --directory /home/ubuntu/service3 > /dev/null 2>&1 &
 
 #     sudo tee /etc/nginx/sites-available/default << 'NGINX_CONF'
 #     server {
@@ -255,73 +259,72 @@ output "secrets" {
 # }
 
 
-### If all the ports are consecutive (for example, 8080-8210),
+### If all the ports are consecutive (for example, 8000-8210),
 ### we can release the range in one go:
-# resource "aws_security_group_rule" "allow_http_services" {
-#   type              = "ingress"
-#   security_group_id = aws_security_group.instances.id
-#   from_port         = 8080
-#   to_port           = 8210
-#   protocol          = "tcp"
-#   cidr_blocks       = ["0.0.0.0/0"]
-# }
+resource "aws_security_group_rule" "allow_http_services" {
+  type              = "ingress"
+  security_group_id = aws_security_group.instances.id
+  from_port         = 8000
+  to_port           = 8210
+  protocol          = "tcp"
+  cidr_blocks       = ["0.0.0.0/0"]
+}
 
-# resource "aws_lb_target_group" "web" {
-#   name     = "tg-web"
-#   port     = 80
-#   protocol = "HTTP"
-#   vpc_id   = data.aws_vpc.default_vpc.id
-# }
+resource "aws_lb_target_group" "web" {
+  name     = "tg-web"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = data.aws_vpc.default_vpc.id
+}
 
-# resource "aws_lb_target_group_attachment" "instance_web" {
-#   target_group_arn = aws_lb_target_group.web.arn
-#   target_id        = aws_instance.instance_test.id
-#   port             = 80
-# }
+resource "aws_lb_target_group_attachment" "instance_web" {
+  target_group_arn = aws_lb_target_group.web.arn
+  target_id        = aws_instance.app_server.id
+  port             = 80
+}
 
-# resource "aws_lb_listener" "http" {
-#   load_balancer_arn = aws_lb.load_balancer.arn
-#   port              = 80
-#   protocol          = "HTTP"
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.web.arn
-#   }
-# }
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.load_balancer.arn
+  port              = 80
+  protocol          = "HTTP"
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web.arn
+  }
+}
 
-# resource "aws_security_group" "alb" {
-#   name = "alb-security-group"
-# }
+resource "aws_security_group" "alb" {
+  name = "alb-security-group"
+}
 
-# resource "aws_security_group_rule" "allow_alb_http_inbound" {
-#   type              = "ingress"
-#   security_group_id = aws_security_group.alb.id
+resource "aws_security_group_rule" "allow_alb_http_inbound" {
+  type              = "ingress"
+  security_group_id = aws_security_group.alb.id
 
-#   from_port   = 80
-#   to_port     = 80
-#   protocol    = "tcp"
-#   cidr_blocks = ["0.0.0.0/0"]
+  from_port   = 80
+  to_port     = 80
+  protocol    = "tcp"
+  cidr_blocks = ["0.0.0.0/0"]
 
-# }
+}
 
-# resource "aws_security_group_rule" "allow_alb_all_outbound" {
-#   type              = "egress"
-#   security_group_id = aws_security_group.alb.id
+resource "aws_security_group_rule" "allow_alb_all_outbound" {
+  type              = "egress"
+  security_group_id = aws_security_group.alb.id
 
-#   from_port   = 0
-#   to_port     = 0
-#   protocol    = "-1"
-#   cidr_blocks = ["0.0.0.0/0"]
+  from_port   = 0
+  to_port     = 0
+  protocol    = "-1"
+  cidr_blocks = ["0.0.0.0/0"]
 
-# }
+}
 
-# resource "aws_lb" "load_balancer" {
-#   name               = "web-app-lb"
-#   load_balancer_type = "application"
-#   subnets            = data.aws_subnet_ids.default_subnet.ids
-#   security_groups    = [aws_security_group.alb.id]
-
-# }
+resource "aws_lb" "load_balancer" {
+  name               = "web-app-lb"
+  load_balancer_type = "application"
+  subnets            = data.aws_subnet_ids.default_subnet.ids
+  security_groups    = [aws_security_group.alb.id]
+}
 
 # resource "aws_db_instance" "free_postgres" {
 #   identifier             = "freetier-postgres"

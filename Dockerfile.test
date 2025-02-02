@@ -1,0 +1,14 @@
+FROM python:alpine
+
+# Define o diretório de trabalho
+WORKDIR /home/ubuntu
+
+# Copia o script de inicialização
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+# Expondo as portas
+EXPOSE 8000 8210
+
+# Executa o script de inicialização
+CMD ["/start.sh"]
