@@ -79,6 +79,19 @@ services:
     networks:
       - dbt-network
 
+  terraform:
+    image: hashicorp/terraform
+    container_name: terraform
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+      - ~/.aws:/root/.aws
+    networks:
+      - dbt-network
+    stdin_open: true
+    tty: true
+    entrypoint: /bin/sh
+
 volumes:
   db-data:
     driver: local

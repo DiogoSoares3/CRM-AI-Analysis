@@ -62,6 +62,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets_version" {
     POSTGRES_PASSWORD        = var.POSTGRES_PASSWORD
     POSTGRES_DB              = var.POSTGRES_DB
     DB_URL_PROD              = var.DB_URL_PROD
+    DB_SCHEMA_PROD           = var.DB_SCHEMA_PROD
     PROJECT_PATH             = var.PROJECT_PATH
     OPENAI_API_KEY           = var.OPENAI_API_KEY
     HOST_AWS                 = var.HOST_AWS
@@ -154,7 +155,7 @@ resource "aws_instance" "app_server" {
     POSTGRES_PASSWORD=${local.secrets["POSTGRES_PASSWORD"]}
     POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
     DB_URL_PROD=${local.secrets["DB_URL_PROD"]}
-    DB_SCHEMA_PROD=${local.secrets["DB_URL_PROD"]}
+    DB_SCHEMA_PROD=${local.secrets["DB_SCHEMA_PROD"]}
     PROJECT_PATH=${local.secrets["PROJECT_PATH"]}
     OPENAI_API_KEY=${local.secrets["OPENAI_API_KEY"]}
     EOT
@@ -165,7 +166,7 @@ resource "aws_instance" "app_server" {
     POSTGRES_DB=${local.secrets["POSTGRES_DB"]}
     POSTGRES_PORT=5432
     DB_TYPE="postgres"
-    DB_SCHEMA_PROD=${local.secrets["DB_URL_PROD"]}
+    DB_SCHEMA_PROD=${local.secrets["DB_SCHEMA_PROD"]}
     DB_THREADS=16
     HOST_AWS=${local.secrets["HOST_AWS"]}
     EOT
@@ -188,8 +189,8 @@ resource "aws_instance" "app_server" {
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }
-        location /api_docs/ {
-            proxy_pass http://127.0.0.1:8200/docs;
+        location /api/ {
+            proxy_pass http://127.0.0.1:8200/;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
         }

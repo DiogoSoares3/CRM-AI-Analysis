@@ -4,7 +4,6 @@ import random
 
 from utils.api_calls import api_request
 from urllib.parse import quote
-from utils.console import console_log
 
 
 def verify_sql_injection(query):
