@@ -6,7 +6,18 @@ from utils.api_calls import api_request
 from urllib.parse import quote
 
 
-def verify_sql_injection(query):
+def verify_sql_injection(query: str) -> str:
+    """
+    Checks if a given SQL query is vulnerable to SQL injection.
+
+    Args:
+        query (str): 
+            The SQL query to be checked.
+
+    Returns:
+        str:
+            The security status of the query ("Secure" or "Insecure").
+    """
     encoded_query = quote(query)
     response = api_request(
         api_url=f"http://0.0.0.0:8200/api/verify-sql-injection/{encoded_query}",
@@ -16,7 +27,20 @@ def verify_sql_injection(query):
     return response
 
 
-def call_rag(query, message_history_id):
+def call_rag(query: str, message_history_id: int) -> dict:
+    """
+    Sends a query to a RAG (Retrieval-Augmented Generation) system.
+
+    Args:
+        query (str): 
+            The user's input query.
+        message_history_id (int): 
+            The ID of the message history session.
+
+    Returns:
+        dict:
+            The response from the RAG system.
+    """
     response = api_request(
         api_url=f"http://0.0.0.0:8200/api/text-to-sql/",
         json={
@@ -27,7 +51,18 @@ def call_rag(query, message_history_id):
     return response
 
 
-def get_historic_message(message_history_id):
+def get_historic_message(message_history_id: int) -> list:
+    """
+    Retrieves the historic messages associated with a given message history ID.
+
+    Args:
+        message_history_id (int): 
+            The ID of the message history session.
+
+    Returns:
+        list:
+            A list of previous messages in the conversation.
+    """
     response = api_request(
         api_url=f"http://0.0.0.0:8200/api/historic-message/",
         json={
@@ -38,14 +73,34 @@ def get_historic_message(message_history_id):
     return response
 
 
-def write_user_and_assistant_messages(q_and_a):
+def write_user_and_assistant_messages(q_and_a: list[dict]) -> None:
+    """
+    Displays chat messages for both the user and assistant in a Streamlit app.
+
+    Args:
+        q_and_a (list[dict]): 
+            A list of messages with 'role' and 'content' keys.
+
+    Returns:
+        None
+    """
     for msg in q_and_a:
         owner = "assistant" if msg["role"] == "assistant" else "user"
         with st.chat_message(name=owner):
             st.write(msg["content"])
 
 
-def update_historic(q_and_a):
+def update_historic(q_and_a: list[dict]) -> None:
+    """
+    Updates the chat history stored in Streamlit's session state.
+
+    Args:
+        q_and_a (list[dict]): 
+            A list of messages to be added to the session history.
+
+    Returns:
+        None
+    """
     if "historic" not in st.session_state:
         st.session_state.historic = q_and_a
     else:
@@ -53,11 +108,25 @@ def update_historic(q_and_a):
             st.session_state.historic.append(msg)
 
 
-def get_new_message_history_id():
+def get_new_message_history_id() -> int:
+    """
+    Generates a new random message history ID.
+
+    Returns:
+        int:
+            A randomly generated integer ID.
+    """
     return random.randint(0, 2**16 - 1)
 
 
-def return_historic():
+def return_historic() -> list:
+    """
+    Retrieves the chat history from Streamlit's session state.
+
+    Returns:
+        list:
+            The stored message history, or an empty list if no history is found.
+    """
     if "historic" not in st.session_state:
         if "message_history_id_site" not in st.session_state:
             st.session_state.message_history_id_site = get_new_message_history_id()
@@ -69,17 +138,29 @@ def return_historic():
     return st.session_state.historic
 
 
-def update_last_message(msg):
-    if "last_message" not in st.session_state:
-        st.session_state.last_message = msg
-    else:
-        st.session_state.last_message = msg
+def update_last_message(msg: dict) -> None:
+    """
+    Updates the last message stored in Streamlit's session state.
+
+    Args:
+        msg (dict): 
+            The message to be stored.
+
+    Returns:
+        None
+    """
+    st.session_state.last_message = msg
 
 
-def return_last_message():
-    if "last_message" not in st.session_state:
-        return []
-    return st.session_state.last_message
+def return_last_message() -> list | dict:
+    """
+    Retrieves the last message stored in Streamlit's session state.
+
+    Returns:
+        list | dict:
+            The last message, or an empty list if no message is stored.
+    """
+    return st.session_state.get("last_message", [])
 
 
 with st.chat_message(name="assistant"):

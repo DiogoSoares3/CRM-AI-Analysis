@@ -166,15 +166,11 @@ def generate_tables_metadata_prompt(metadata: List[TableMetadata]) -> str:
     """
     Generates a descriptive string for table metadata.
 
-    Parameters
-    ----------
-    metadata : List[TableMetadata]
-        A list of TableMetadata objects containing table information.
+    Args:
+        metadata: List[TableMetadata]: A list of TableMetadata objects containing table information.
 
-    Returns
-    -------
-    str
-        A formatted string describing the tables and their columns.
+    Returns:
+        str: A formatted string describing the tables and their columns.
     """
     table_descriptions = []
     for table in metadata:

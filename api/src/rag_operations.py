@@ -36,15 +36,13 @@ def verify_sql_injection(query: str) -> SQLInjectionStatus:
     """
     Identifies whether a given SQL query is a potential SQL injection attempt.
 
-    Parameters
-    ----------
-    query : str
+    Args:
+    query (str):
         The SQL query input from the user.
 
-    Returns
-    -------
-    SQLInjectionStatus
-        A status indicating whether the query is "Secure" or "Insecure".
+    Returns:
+        SQLInjectionStatus:
+            A status indicating whether the query is "Secure" or "Insecure".
     """
     examples = [
         {
@@ -113,17 +111,15 @@ def text_to_sql(
     """
     Converts natural language input into SQL queries using an AI agent.
 
-    Parameters
-    ----------
-    message : Message
-        The user's input query in natural language.
-    session : Session, optional
-        The database session dependency, by default retrieved from `get_session`.
+    Args:
+        message (Message):
+            The user's input query in natural language.
+        session (Session):
+            The database session dependency, by default retrieved from `get_session`.
 
-    Returns
-    -------
-    List[SerializableChatSchema]
-        A list of chat messages containing the generated SQL query and responses.
+    Returns:
+        serializable_chat (List[SerializableChatSchema]):
+            A list of chat messages containing the generated SQL query and responses.
     """
     chat = chat_history_from_id(message.message_history_id, session)
     save_user_message_in_chat(message.query, chat)

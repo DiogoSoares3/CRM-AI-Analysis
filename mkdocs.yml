@@ -30,7 +30,7 @@ plugins:
 - mkdocstrings: 
     handlers:
       python:
-        paths: [api, datawarehouse, app]
+        paths: [api, datawarehouse, app, shared]
         load_external_modules: true
         options:
           show_source: true

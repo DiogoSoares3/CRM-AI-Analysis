@@ -24,8 +24,19 @@ load_dotenv()
 router = APIRouter(tags=['Database Operations'])
 
 
-@router.get('/serve-dbt-docs/', status_code=200, description='Generate and serve DBT docs')
+@router.get(
+    '/serve-dbt-docs/',
+    status_code=200,
+    description='Generate and serve DBT docs'
+)
 def docs_dbt() -> Response:
+    """
+    Generates and serves DBT documentation using the configured DBT path.
+
+    Returns:
+        Response:
+            A FastAPI response indicating the success or failure of the operation.
+    """
     original_dir = os.getcwd()
     try:
         dbt_path = settings.DBT_PATH
@@ -62,8 +73,19 @@ def docs_dbt() -> Response:
         return Response(status_code=200)
 
 
-@router.post('/run-dbt/', status_code=200, description='Run DBT models for data transformation and agregation')
+@router.post(
+    '/run-dbt/',
+    status_code=200,
+    description='Run DBT models for data transformation and agregation'
+)
 def run_dbt() -> Response:
+    """
+    Executes DBT models to transform and aggregate data.
+
+    Returns:
+        Response:
+            A FastAPI response indicating the success or failure of the operation.
+    """
     original_dir = os.getcwd()
     try:
         dbt_path = settings.DBT_PATH
@@ -95,8 +117,28 @@ def run_dbt() -> Response:
         return Response(status_code=200)
 
 
-@router.post('/create-run-won-stage-data/', status_code=200, description='Insert data to Postgres database given a user input.')
-def create_run_won_stage_data(schema, session=Depends(get_session)) -> Response:
+@router.post(
+    '/create-run-won-stage-data/',
+    status_code=200,
+    description='Insert data to Postgres database given a user input.'
+)
+def create_run_won_stage_data(
+    schema:str, 
+    session=Depends(get_session)
+) -> Response:
+    """
+    Prepares and inserts processed data into the PostgreSQL database.
+
+    Args:
+        schema (str):
+            The database schema where the data will be stored.
+        session (Session):
+            The database session dependency.
+
+    Returns:
+        Response:
+            A FastAPI response indicating the success or failure of the operation.
+    """
     try:
         model_predictions_summary, customers_rfm_features, general_enriched_dataset = full_dataset_preparation(session)
         all_dataframes = [model_predictions_summary, customers_rfm_features, general_enriched_dataset]
@@ -138,8 +180,35 @@ def create_run_won_stage_data(schema, session=Depends(get_session)) -> Response:
     return Response(status_code=200)
 
 
-@router.post('/insert-won-stage-data/', status_code=200, description='Insert data to Postgres database given a user input.', response_model=SalesPipelineSourceSchema)
-def insert_won_stage_data(data: UserInput, session = Depends(get_session)) -> SalesPipelineSourceSchema:
+@router.post(
+    '/insert-won-stage-data/',
+    status_code=200,
+    description='Insert data to Postgres database given a user input.',
+    response_model=SalesPipelineSourceSchema
+)
+def insert_won_stage_data(
+    data: UserInput, 
+    session = Depends(get_session)
+) -> SalesPipelineSourceSchema:
+    """
+    Inserts a new sales opportunity record into the database.
+
+    Args:
+        data (UserInput):
+            The user-provided data containing details about the sales opportunity.
+        session (Session, optional):
+            The database session dependency.
+
+    Returns:
+        SalesPipelineSourceSchema:
+            The newly created sales opportunity record.
+
+    Raises:
+        NotImplementedError:
+            If the user input includes an unknown customer.
+        Exception:
+            If an error occurs during the database transaction.
+    """
     if data.unknow_customer:
         raise NotImplementedError('Unknown Customers are not yet implemented')
 
@@ -170,8 +239,30 @@ def insert_won_stage_data(data: UserInput, session = Depends(get_session)) -> Sa
     return new_oportunity
 
 
-@router.post('/insert-init-data/', status_code=200, description='Insert data to Postgres database given a source directory containing JSON or CSV files.')
+@router.post(
+    '/insert-init-data/',
+    status_code=200,
+    description='Insert data to Postgres database given a source directory containing JSON or CSV files.'
+)
 async def insert_init_data(session = Depends(get_session)) -> Response:
+    """
+    Inserts initial data into the PostgreSQL database from JSON or CSV files.
+
+    This function reads data files from the project's `data` directory, 
+    creates tables dynamically (if they do not exist), and inserts the data.
+
+    Args:
+        session (Session, optional):
+            The database session dependency.
+
+    Returns:
+        Response:
+            An HTTP 200 response indicating the operation's success.
+
+    Raises:
+        Exception:
+            If an error occurs during schema creation, table creation, or data insertion.
+    """
     with engine.connect() as conn:
         schema = settings.DB_SCHEMA
         create_schema_query = text(f"CREATE SCHEMA IF NOT EXISTS {schema};")
