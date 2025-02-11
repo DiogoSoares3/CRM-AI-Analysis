@@ -192,3 +192,4 @@ pyrightconfig.json
 *.tfstate.*
 *.tfvars
 variables.tf
+tfplan

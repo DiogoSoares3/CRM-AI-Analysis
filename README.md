@@ -197,7 +197,7 @@ Below is a overview of the project context with each technology used in the proj
 - **Streamlit**: Provides the interactive dashboard for data ingestion and user-friendly visualization.
 - **Pydantic**: Enforces data contracts to validate new data inputs before processing.
 - **PostgreSQL**: Acts as the central relational database for storing both raw and processed data.
-- **dbt**: Transforms raw data into structured, layered formats (bronze, silver, gold) for analysis.
+- **DBT**: Transforms raw data into structured, layered formats (bronze, silver, gold) for analysis.
 - **Docker**: Containerizes the entire application to ensure consistency across environments.
 - **Terraform**: Automates cloud infrastructure provisioning, enabling scalable deployments.
 - **AWS**: Hosts the application infrastructure, including compute (EC2 and ELB), storage (S3 and DynamoDB), and database resources (RDS).
@@ -481,6 +481,8 @@ The deployment of this project follows a well-structured and automated Infrastru
 
 ### Development Environment
 
+If don't have docker engine installed, follow the this [tutorial](https://docs.docker.com/engine/install/).
+
 In the development environment, the system is containerized using Docker Compose, running all required services locally for ease of development and testing. The main components include:
 
 - **Application Container**: Runs the core application, handling API requests and integrating with the AI models and database.
@@ -489,7 +491,19 @@ In the development environment, the system is containerized using Docker Compose
 - **MkDocs Container**: Hosts the project documentation, allowing developers and users to access structured documentation about the system.
 - **Terraform Container** (Optional): Developers can use a dedicated Terraform container to apply infrastructure changes without requiring installations on their local machine.
 
+To run the aplication locally, run the following command:
+
+```bash
+docker compose -f docker-compose.dev.yaml up -d
+```
+
 The `.env` file is loaded into containers to manage environment-specific configurations such as database credentials and API keys.
+
+To take down the containers, execute this command:
+
+```bash
+docker compose -f docker-compose.dev.yaml down -d
+```
 
 ### Production Environment
 
@@ -520,42 +534,87 @@ In production, the system transitions from local containerized execution to a cl
 
 ### Deployment Process
 
+1. **Infrastructure Provisioning**
+
+    Terraform is used to provision and manage all the necessary AWS services for this project. You have two options: install Terraform locally by following the [official installation guide](https://developer.hashicorp.com/terraform/install) or run it inside a container.
+
+    #### Steps to Set Up Infrastructure:
+    
+    1. Create an IAM User:
+
+        - Log in to your AWS root account and navigate to the AWS Management Console.
+        - Create a new IAM group and grant it full access to the following services: S3, DynamoDB, EC2, RDS, and Secrets Manager.
+        - Create a new IAM user and add the user to the group you just created. This IAM user will be used for making infrastructure changes.
+    
+    2. Configure Your AWS Local Workspace:
+
+        - Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) if it is not already installed.
+        - Run the following command to configure your AWS credentials:
+
+            ```bash
+            aws configure
+            ```
+        
+        You will be prompted to enter the IAM user’s Access Key ID and Secret Access Key, as well as your default region and output format.
+
+    3. Execute Terraform to Provision Infrastructure:
+
+        - (Option 1) Running Terraform Locally: Once you have configured the AWS CLI, you can run Terraform directly from your local environment. Simply execute:
+
+            ```bash
+            ./start_terraform.sh
+            ```
+            This script will initialize Terraform, plan the changes, and apply them to set up the necessary AWS infrastructure.
+
+        - (Option 2) Running Terraform in a Docker Container: If you prefer to run Terraform inside a container, use the following command:
+
+            ```bash
+            docker run -it \
+            --name terraform \
+            --user root \
+            --workdir /workspace \
+            -v "$(pwd)":/workspace \
+            -v "$HOME/.aws":/root/.aws \
+            --entrypoint /bin/sh \
+            hashicorp/terraform \
+            -c "./start_terraform.sh && exec /bin/sh"
+            ```
+
+            In this command:
+
+            - The current directory is mounted into /workspace in the container.
+            - Your local AWS credentials (from `~/.aws`) are mounted to `/root/.aws` so that Terraform can authenticate with AWS.
+            - The container starts by running the start_terraform.sh script, and then drops you into an interactive shell.
+
+2. Application Deployment
+    
+    Once your AWS infrastructure is provisioned and all necessary services are set up, you can deploy the application to the EC2 instance. The deployment process involves configuring the environment, starting the Dockerized application stack, and verifying that the services are accessible via the web.
+
+    #### Deployment Steps:
+
+    1. Accessing the EC2 Instance and Load Balancer:
+
+        - After Terraform has provisioned your infrastructure, log in to the AWS console and navigate to the EC2 and Load Balancer services.
+        - Locate the Load Balancer that Terraform created. Copy its DNS name, which will be used to access your deployed services.
+    
+    2. Deploying the Application:
+
+        - The application is containerized and deployed on the EC2 instance. Services are orchestrated using Docker Compose containing the `docker-compose.prod.yaml` services, including:
+            - FastAPI backend for data processing and model predictions and Streamlit frontend for data ingestion and Text-To-SQL ChatBot.
+            - Mkdocs for the aplication documentation.
+
+        - With your infrastructure up, access your services by entering the following URLs in your web browser (replace <your_load_balancer_dns> with the actual DNS name from your Load Balancer):
+
+        - Main Application: `<your_load_balancer_dns>/app/`
+        - Main Documentation: `<your_load_balancer_dns>/docs/`
+        - DBT Documentation: `<your_load_balancer_dns>/dbt_docs/`
+
+    3. Verifying the Deployment:
+
+        - Ensure that the EC2 instance is running and that the Docker containers are up and healthy.
+        - Test each URL in your browser to confirm that the application, documentation, and DBT pages are accessible and functioning as expected.
+
+## Future Improvements
 
 
-
-
-# FLOW mermaid
-```mermaid
-graph TD
-    A[Inicio: full_dataset_preparation] --> B[Carregar dados de contas]
-    A --> C[Carregar dados de produtos]
-    A --> D[Carregar dados do pipeline de vendas]
-    A --> E[Carregar dados das equipes de vendas]
-
-    B --> F[Filtrar e limpar dados]
-    C --> F
-    D --> F
-    E --> F
-
-    F --> G[Mesclar DataFrames]
-    G --> H[Pré-processamento de dados]
-    H --> I{Etapa do negócio é 'Won'?}
-    I -->|Sim| J[Feature Engineering para 'Won']
-    I -->|Nao| K[Erro: Apenas 'Won' implementado]
-
-    J --> L[Filtrar por deal_stage]
-    L --> M[Calcular RFM]
-    M --> N[Expandir recursos de RFM]
-
-    N --> O[Modelar BG/NBD]
-    N --> P[Modelar Gamma-Gamma]
-    P --> Q[Prever CLTV]
-    O --> Q[Prever CLTV]
-
-    Q --> R[Remover duplicatas]
-    R --> S[Mesclar CLTV e RFM com dados principais]
-    S --> T[Fim: Retornar DataFrame Final]
-
-    style K fill:#f96,stroke:#333,stroke-width:4px
-    style T fill:#9f6,stroke:#333,stroke-width:4px
-```
+## References
