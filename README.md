@@ -1,5 +1,29 @@
 # AI Agent Analysis of a CRM System
 
+## Table of Contents
+
+- [Introduction](#introduction)
+    - [Project Workflow](#project-workflow)
+- [Project Overview](#project-overview)
+    - [Project Directory Structure](#project-directory-structure)
+    - [Main Technologies Used](#main-technologies-used)
+    - [Dataset Overview](#dataset-overview)
+        - [Base Key Insights from the Dataset](#base-key-insights-from-the-dataset)
+        - [Data Model](#data-model)
+- [System Architecture, Data Flow, Modeling & Query System](#system-architecture-data-flow-modeling--query-system)
+    - [System Architecture](#system-architecture)
+    - [Data Flow & Processing Pipeline](#data-flow--processing-pipeline)
+    - [Modeling & Predictions](#modeling--predictions)
+    - [Intelligent Query System (Text-to-SQL Agent)](#intelligent-query-system-text-to-sql-agent)
+- [Deployment & Execution](#deployment--execution)
+    - [Development Environment](#development-environment)
+    - [Production Environment](#production-environment)
+    - [Deployment Process](#deployment-process)
+        - [Steps to Set Up Infrastructure:](#steps-to-set-up-infrastructure)
+        - [Deployment Steps:](#deployment-steps)
+- [Future Improvements](#future-improvements)
+- [References](#references)
+
 ## Introduction
 
 In today's competitive hardware market, understanding customer behavior and optimizing sales strategies are essential for sustaining growth and driving profitability. This project was designed to empower a hardware company by leveraging advanced data analysis and machine learning techniques to extract actionable insights from their CRM dataset. The initiative began with an extensive exploratory data analysis (EDA) conducted in a Jupyter Notebook, where key variables such as customer profiles, sales team performance, product dynamics, deal stages, and close values were meticulously examined. This initial exploration provided a comprehensive view of the data landscape, highlighting both opportunities and areas for improvement.
@@ -22,9 +46,11 @@ Here is a diagram showing the project's execution flow:
 
 ## Project Overview
 
-This project focuses on analyzing customer relationship management (CRM) data from a hardware sales company to derive meaningful insights and enhance decision-making. The workflow begins with exploratory data analysis (EDA) in a Jupyter Notebook, followed by feature engineering, customer segmentation, predictive modeling, and the deployment of an interactive application. To show how the directories and files of these features are organized, take a look at the project tree:
+This project focuses on analyzing customer relationship management (CRM) data from a hardware sales company to derive meaningful insights and enhance decision-making. The workflow begins with exploratory data analysis (EDA) in a Jupyter Notebook, followed by feature engineering, customer segmentation, predictive modeling, and the deployment of an interactive application.
 
 ### Project Directory Structure
+
+To show how the directories and files of these features are organized, take a look at the project tree:
 
 ```bash
 .
@@ -207,6 +233,8 @@ Below is a overview of the project context with each technology used in the proj
 - **MkDocs**: Generates and maintains comprehensive documentation for the project.
 
 ### Dataset Overview
+
+All the data analysis was made on this public dataset in Kaggle: https://www.kaggle.com/datasets/innocentmfa/crm-sales-opportunities/
 
 | Table          | Field             |                   Description                                               |
 |----------------|-------------------|-----------------------------------------------------------------------------|
@@ -491,13 +519,13 @@ In the development environment, the system is containerized using Docker Compose
 - **MkDocs Container**: Hosts the project documentation, allowing developers and users to access structured documentation about the system.
 - **Terraform Container** (Optional): Developers can use a dedicated Terraform container to apply infrastructure changes without requiring installations on their local machine.
 
-To run the aplication locally, run the following command:
+The project leverages `.env` files to manage environment-specific configurations, including database credentials, API keys, and other sensitive settings. To get started, duplicate the `.env.example` file located in the project's root directory and rename it to `.env`, then customize it with your local configuration values. Similarly, within the datawarehouse directory, copy the `datawarehouse/.env.example` file, rename it to `.env`, and adjust the settings as needed for the datawarehouse following the DBT configs instructions. These files are automatically loaded into the containers at runtime, ensuring that each service operates with the correct environment-specific parameters while keeping sensitive information out of the source code. 
+
+After setting up the enviroment files, you are able to run the dev (local) aplication, so execute the following command:
 
 ```bash
 docker compose -f docker-compose.dev.yaml up -d
 ```
-
-The `.env` file is loaded into containers to manage environment-specific configurations such as database credentials and API keys.
 
 To take down the containers, execute this command:
 
@@ -532,6 +560,8 @@ In production, the system transitions from local containerized execution to a cl
     - **S3 for Terraform State**: The Terraform state file (`tf.state`) is stored securely in an S3 bucket, ensuring a consistent and traceable infrastructure deployment.
     - **DynamoDB for State Locking**: Prevents concurrent modifications to the Terraform state, ensuring safe infrastructure updates.
 
+Please note that both `.env` files in the project must be properly configured with your AWS RDS instance details for the production environment. Specifically, ensure that the `datawarehouse/.env` file contains the correct host name for your RDS instance, while the root `.env` file includes the production database URL. Accurate setup of these variables is essential for establishing seamless connectivity between the application and the production database, and it guarantees that all components relying on these settings will function correctly. Additionally, always verify these configurations before deploying to production and ensure that sensitive credentials are managed securely, keeping them out of version control.
+
 ### Deployment Process
 
 1. **Infrastructure Provisioning**
@@ -540,13 +570,13 @@ In production, the system transitions from local containerized execution to a cl
 
     #### Steps to Set Up Infrastructure:
     
-    1. Create an IAM User:
+    1. **Create an IAM User**:
 
         - Log in to your AWS root account and navigate to the AWS Management Console.
         - Create a new IAM group and grant it full access to the following services: S3, DynamoDB, EC2, RDS, and Secrets Manager.
         - Create a new IAM user and add the user to the group you just created. This IAM user will be used for making infrastructure changes.
     
-    2. Configure Your AWS Local Workspace:
+    2. **Configure Your AWS Local Workspace**:
 
         - Install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) if it is not already installed.
         - Run the following command to configure your AWS credentials:
@@ -559,14 +589,14 @@ In production, the system transitions from local containerized execution to a cl
 
     3. Execute Terraform to Provision Infrastructure:
 
-        - (Option 1) Running Terraform Locally: Once you have configured the AWS CLI, you can run Terraform directly from your local environment. Simply execute:
+        - **(Option 1) Running Terraform Locally**: Once you have configured the AWS CLI, you can run Terraform directly from your local environment. Simply execute:
 
             ```bash
             ./start_terraform.sh
             ```
             This script will initialize Terraform, plan the changes, and apply them to set up the necessary AWS infrastructure.
 
-        - (Option 2) Running Terraform in a Docker Container: If you prefer to run Terraform inside a container, use the following command:
+        - **(Option 2) Running Terraform in a Docker Container**: If you prefer to run Terraform inside a container, use the following command:
 
             ```bash
             docker run -it \
@@ -586,35 +616,41 @@ In production, the system transitions from local containerized execution to a cl
             - Your local AWS credentials (from `~/.aws`) are mounted to `/root/.aws` so that Terraform can authenticate with AWS.
             - The container starts by running the start_terraform.sh script, and then drops you into an interactive shell.
 
-2. Application Deployment
+2. **Application Deployment**
     
     Once your AWS infrastructure is provisioned and all necessary services are set up, you can deploy the application to the EC2 instance. The deployment process involves configuring the environment, starting the Dockerized application stack, and verifying that the services are accessible via the web.
 
     #### Deployment Steps:
 
-    1. Accessing the EC2 Instance and Load Balancer:
+    1. **Accessing the EC2 Instance and Load Balancer**:
 
         - After Terraform has provisioned your infrastructure, log in to the AWS console and navigate to the EC2 and Load Balancer services.
         - Locate the Load Balancer that Terraform created. Copy its DNS name, which will be used to access your deployed services.
     
-    2. Deploying the Application:
+    2. **Deploying the Application**:
 
         - The application is containerized and deployed on the EC2 instance. Services are orchestrated using Docker Compose containing the `docker-compose.prod.yaml` services, including:
             - FastAPI backend for data processing and model predictions and Streamlit frontend for data ingestion and Text-To-SQL ChatBot.
             - Mkdocs for the aplication documentation.
 
-        - With your infrastructure up, access your services by entering the following URLs in your web browser (replace <your_load_balancer_dns> with the actual DNS name from your Load Balancer):
+        - With your infrastructure up, access your services by entering the following URLs in your web browser (replace `<your_load_balancer_dns>` with the actual DNS name from your Load Balancer):
 
-        - Main Application: `<your_load_balancer_dns>/app/`
-        - Main Documentation: `<your_load_balancer_dns>/docs/`
-        - DBT Documentation: `<your_load_balancer_dns>/dbt_docs/`
+        - **Main Application**: `<your_load_balancer_dns>/app/`
+        - **Main Documentation**: `<your_load_balancer_dns>/docs/`
+        - **DBT Documentation**: `<your_load_balancer_dns>/dbt_docs/`
 
-    3. Verifying the Deployment:
+    3. **Verifying the Deployment**:
 
         - Ensure that the EC2 instance is running and that the Docker containers are up and healthy.
         - Test each URL in your browser to confirm that the application, documentation, and DBT pages are accessible and functioning as expected.
 
 ## Future Improvements
 
+Future enhancements could expand the analytical scope of the project by incorporating the entire sales pipeline. In addition to analyzing 'Won' deals, advanced machine learning models could be developed to predict outcomes for opportunities in the 'Lost', 'Engaging', and 'Prospecting' stages. For example, classifiers or regression models could estimate the probability of an opportunity converting to 'Won' or falling to 'Lost', enabling more proactive sales strategies. Further exploration could involve customer churn prediction, dynamic pricing strategies, and deeper segmentation techniques using additional behavioral and transactional data. Other potential topics include the implementation of real-time analytics, sentiment analysis of customer interactions, and network analysis to understand interdependencies among clients. These improvements would not only provide a more holistic view of the sales process but also empower decision-makers with actionable insights across all stages of the customer journey.
 
 ## References
+
+- **Dataset**: https://www.kaggle.com/datasets/innocentmfa/crm-sales-opportunities/
+- **Data Constract**: https://datacontract.com/
+- **Data Science Project Structure**: https://cookiecutter-data-science.drivendata.org/
+- **GitIgnore file Setup**: https://www.toptal.com/developers/gitignore/
