@@ -5,3 +5,11 @@ RUN pip install -U pip && pip install mkdocstrings[python] mkdocs-material
 WORKDIR /docs
 
 COPY . /docs
+COPY ./reports /docs/docs
+
+COPY entrypoint_mkdocs.sh /entrypoint_mkdocs.sh
+RUN chmod +x /entrypoint_mkdocs.sh
+
+ENTRYPOINT ["/entrypoint_mkdocs.sh"]
+
+CMD ["/bin/sh", "-c", "mkdocs gh-deploy --force && mkdocs serve --dev-addr=0.0.0.0:8000"]
