@@ -1714,7 +1714,7 @@
 <p>Deployed using Docker and orchestrated via Terraform on AWS (leveraging EC2, RDS, S3, DynamoDB, and load balancers), the project ensures a scalable and robust infrastructure. Overall, this integrated solution not only streamlines data processing and predictive analytics but also empowers the hardware company with the tools needed to make informed, data-driven decisions that can significantly enhance customer engagement and drive business success.</p>
 <h3 id="project-workflow">Project Workflow</h3>
 <p>Here is a diagram showing the project's execution flow:</p>
-<p><img alt="project_workflow" src="../reports/figures/project_workflow.png" /></p>
+<p><img alt="project_workflow" src="reports/figures/project_workflow.png" /></p>
 <h2 id="project-overview">Project Overview</h2>
 <p>This project focuses on analyzing customer relationship management (CRM) data from a hardware sales company to derive meaningful insights and enhance decision-making. The workflow begins with exploratory data analysis (EDA) in a Jupyter Notebook, followed by feature engineering, customer segmentation, predictive modeling, and the deployment of an interactive application.</p>
 <h3 id="project-directory-structure">Project Directory Structure</h3>
@@ -1879,7 +1879,7 @@
 </code></pre>
 <h3 id="main-technologies-used">Main Technologies Used</h3>
 <p>Below is a overview of the project context with each technology used in the project:</p>
-<p><img alt="main_technologies" src="../reports/figures/used_technologies.png" /></p>
+<p><img alt="main_technologies" src="reports/figures/used_technologies.png" /></p>
 <ul>
 <li><strong>Jupyter Notebook</strong>: Used for initial exploratory data analysis and rapid prototyping of models.</li>
 <li><strong>FastAPI</strong>: Powers the backend API, managing data preprocessing, feature engineering, and model predictions.</li>
@@ -2137,7 +2137,7 @@ Processed data is initially written into a PostgreSQL database as source tables 
 <li><strong>Silver Layer (Staging)</strong>: All the raw tables are centralized into one consolidated table with an <code>stg</code> extension, preparing the data for further business-specific transformations.</li>
 <li><strong>Gold Layer (Business-Ready Views)</strong>: Tailored views are created on top of the Silver layer, focusing on key business metrics and ready for high-confidence querying.</li>
 </ul>
-<p><img alt="medallion" src="../reports/figures/medallion.png" /></p>
+<p><img alt="medallion" src="reports/figures/medallion.png" /></p>
 </li>
 <li>
 <p><strong>Data Contract Validation</strong>:
@@ -2157,7 +2157,7 @@ The entire pre-processing, feature engineering, and modeling code from the explo
 <li>Integrating security measures, such as validating data contracts and preventing SQL injection.</li>
 <li>Endpoints for Retrieval Augmented Generation (RAG) on our golden layer views</li>
 </ul>
-<p><img alt="api_endpoints" src="../reports/figures/api_endpoints.png" /></p>
+<p><img alt="api_endpoints" src="reports/figures/api_endpoints.png" /></p>
 </li>
 <li>
 <p><strong>Streamlit Dashboard</strong>:
@@ -2168,7 +2168,7 @@ Allows company collaborators to submit new data entries (e.g., client details, p
 <li><strong>Chatbot and Analytics Tab</strong>:
 Provides decision-makers with an interactive chatbot powered by LangChain and LangGraph. This tool accepts natural language queries, converts them into SQL queries, and retrieves business insights from the transformed data layers (preferably using the golden layer for more enriched responses). It offers a seamless and intuitive experience for non-technical users to access complex data analyses.</li>
 </ul>
-<p><img alt="streamlit_ui" src="../reports/figures/streamlit_ui.png" /></p>
+<p><img alt="streamlit_ui" src="reports/figures/streamlit_ui.png" /></p>
 </li>
 </ul>
 </li>
@@ -2185,7 +2185,7 @@ The production environment is defined as code using Terraform. The configuration
 <li><strong>Database Service</strong>: An RDS instance replaces the local PostgreSQL container in production, ensuring high availability and scalability.</li>
 <li><strong>Secrets</strong>: Secrets Manager for making an <code>.env</code> file inside of the EC2 instance.</li>
 </ul>
-<p><img alt="aws_architecture" src="../reports/figures/aws_architecture.png" /></p>
+<p><img alt="aws_architecture" src="reports/figures/aws_architecture.png" /></p>
 </li>
 </ul>
 </li>
